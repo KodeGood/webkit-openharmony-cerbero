@@ -24,7 +24,8 @@ class Recipe(recipe.Recipe):
     files_python = []
 
     patches = [
-        f'{name}/0001-nasm-Add-mms-bitfields-to-the-list-of-ignored-flags.patch'
+        f'{name}/0001-nasm-Add-mms-bitfields-to-the-list-of-ignored-flags.patch',
+        f'{name}/0002-Add-OpenHarmony-support.patch'
     ]
 
     async def install(self):

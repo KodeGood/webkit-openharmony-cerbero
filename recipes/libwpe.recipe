@@ -29,6 +29,7 @@ class Recipe(recipe.Recipe):
         'include/wpe-1.0/wpe/view-backend.h',
         'include/wpe-1.0/wpe/wpe-egl.h',
         'include/wpe-1.0/wpe/wpe.h',
+        'lib/pkgconfig/wpe-1.0.pc',
     ]
 
     library_type = LibraryType.SHARED

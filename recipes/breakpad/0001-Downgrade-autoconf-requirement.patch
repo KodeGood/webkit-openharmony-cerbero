@@ -1,0 +1,25 @@
+From fc2c98bfb505aa5df001809163a2983ff2c3ea20 Mon Sep 17 00:00:00 2001
+From: Jani Hautakangas <jani@kodegood.com>
+Date: Sat, 11 Oct 2025 11:03:38 +0300
+Subject: [PATCH] Downgrade autoconf requirement
+
+---
+ configure.ac | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/configure.ac b/configure.ac
+index 0258c116..4f740b30 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -27,7 +27,7 @@
+ # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ 
+ 
+-AC_PREREQ([2.71])
++AC_PREREQ([2.69])
+ 
+ AC_INIT([breakpad],[0.1],[google-breakpad-dev@googlegroups.com])
+ dnl Sanity check: the argument is just a file that should exist.
+-- 
+2.48.1
+

@@ -36,7 +36,7 @@ class Package(custom.GStreamer, package.Package):
             self.files.append('gstreamer-vaapi-1.0:plugins_codecs')
             self.files_devel.append('gstreamer-vaapi-1.0:plugins_codecs_devel')
 
-        if self.config.target_platform in (Platform.WINDOWS, Platform.ANDROID):
+        if self.config.target_platform in [Platform.WINDOWS, Platform.ANDROID, Platform.OHOS]:
             # Needed by zbar library
             self.files.append('libiconv:libs')
 

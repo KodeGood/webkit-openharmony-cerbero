@@ -1,0 +1,55 @@
+From 77e402c970e8b09af3660fb3504ff048bf796aef Mon Sep 17 00:00:00 2001
+From: Jani Hautakangas <jani@kodegood.com>
+Date: Tue, 7 Oct 2025 10:09:12 +0300
+Subject: [PATCH] Add OHOS support
+
+---
+ gettext-runtime/configure.ac     | 6 ++++++
+ gettext-runtime/intl/Makefile.am | 8 +++++++-
+ 2 files changed, 13 insertions(+), 1 deletion(-)
+
+diff --git a/gettext-runtime/configure.ac b/gettext-runtime/configure.ac
+index b2bfda5..549e7ba 100644
+--- a/gettext-runtime/configure.ac
++++ b/gettext-runtime/configure.ac
+@@ -93,6 +93,12 @@ case "$host_os" in
+ esac
+ AM_CONDITIONAL([WINDOWS_NATIVE], [test $is_windows_native = yes])
+ 
++case "$host_os" in
++  ohos*) host_is_ohos=yes ;;
++  *)     host_is_ohos=no ;;
++esac
++AM_CONDITIONAL([HOST_OHOS], [test "$host_is_ohos" = yes])
++
+ dnl Checks for libraries.
+ 
+ dnl These are the only lines required to internationalize the package.
+diff --git a/gettext-runtime/intl/Makefile.am b/gettext-runtime/intl/Makefile.am
+index 22de832..e7f4fcf 100644
+--- a/gettext-runtime/intl/Makefile.am
++++ b/gettext-runtime/intl/Makefile.am
+@@ -502,13 +502,19 @@ LTV_CURRENT=10
+ LTV_REVISION=0
+ LTV_AGE=2
+ 
++if HOST_OHOS
++LIBINTL_VERSION_FLAGS = -avoid-version
++else
++LIBINTL_VERSION_FLAGS = -version-info $(LTV_CURRENT):$(LTV_REVISION):$(LTV_AGE)
++endif
++
+ # How to build libintl.la and libgnuintl.la.
+ # Limit the exported symbols: Don't export glwthread* (from gnulib modules).
+ OTHER_LDFLAGS = \
+   @LTLIBICONV@ @INTL_MACOSX_LIBS@ $(INTL_WINDOWS_LIBS) @LTLIBTHREAD@ \
+   -no-undefined \
+   -export-symbols-regex '^([^g]|g[^l]|gl[^w]|glw[^t]|glwt[^h]|glwth[^r]|glwthr[^e]|glwthre[^a]|glwthrea[^d]).*' \
+-  -version-info $(LTV_CURRENT):$(LTV_REVISION):$(LTV_AGE) \
++  $(LIBINTL_VERSION_FLAGS) \
+   -rpath $(libdir)
+ libintl_la_LDFLAGS    = $(AM_LDFLAGS) $(OTHER_LDFLAGS)
+ libgnuintl_la_LDFLAGS = $(AM_LDFLAGS) $(OTHER_LDFLAGS)
+-- 
+2.48.1
+

@@ -30,7 +30,8 @@ class Platform:
     WINDOWS = 'windows'
     DARWIN = 'darwin'
     ANDROID = 'android'
-    IOS = 'ios'
+    IOS = 'ios',
+    OHOS = 'ohos'
 
 
 class Architecture:
@@ -71,6 +72,7 @@ class Distro:
     IOS = 'ios'
     ANDROID = 'android'
     GENTOO = 'gentoo'
+    OHOS = 'ohos'
     NONE = 'none'
 
 
@@ -192,6 +194,8 @@ class DistroVersion:
     ANDROID_S = 'android_31_s' # API Level 31
     ANDROID_SV2 = 'android_32_sv2' # API Level 32
     ANDROID_TIRAMISU = 'android_33_tiramisu' # API Level 33
+    # OHOS
+    OHOS_6_0 = 'ohos_6_0'
     NONE_UCLIBC = 'none_uclibc'
     NONE_GLIBC = 'none_glibc'
 
@@ -240,6 +244,13 @@ class DistroVersion:
         if not version.startswith('ios_'):
             raise FatalError('Not an iOS version: ' + version)
         return [int(s) for s in version[4:].split('_')]
+
+    @staticmethod
+    def get_ohos_api_version(version):
+        if version == DistroVersion.OHOS_6_0:
+            return 20
+        else:
+            raise FatalError('DistroVersion not supported')
 
 
 class LicenseDescription:

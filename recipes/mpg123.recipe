@@ -27,6 +27,8 @@ class Recipe(recipe.Recipe):
             if self.config.target_arch == Architecture.X86:
                 # make sure we use 32bit asm
                 self.configure_options += ' --with-cpu=x86 '
+        if self.config.target_platform in [Platform.OHOS]:
+            self.autoreconf = True
         # Only install the libmpg123 library and things needed for it
         self.make_install = self.make + ['install-libLTLIBRARIES', 'install-pkgconfigDATA',
                                          'install-includeHEADERS', 'install-nodist_includeHEADERS']

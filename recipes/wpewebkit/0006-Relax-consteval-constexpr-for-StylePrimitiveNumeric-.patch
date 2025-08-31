@@ -1,0 +1,33 @@
+From 0e27892daf141ea19ab52647d92b143a824ff612 Mon Sep 17 00:00:00 2001
+From: Jani Hautakangas <jani@kodegood.com>
+Date: Mon, 8 Sep 2025 20:06:04 +0000
+Subject: [PATCH 06/10] Relax consteval -> constexpr for
+ StylePrimitiveNumeric::emptyValue()
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+consteval may only be called in immediate contexts. emptyValue() is used in
+normal code paths (ctor, isEmpty()), which triggers “cannot take address of
+consteval function outside of an immediate invocation”. Make it constexpr so
+it can be used in both constant and non-constant contexts.
+---
+ Source/WebCore/style/values/primitives/StylePrimitiveNumeric.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/Source/WebCore/style/values/primitives/StylePrimitiveNumeric.h b/Source/WebCore/style/values/primitives/StylePrimitiveNumeric.h
+index 04ce001cbcc7..891fba01958d 100644
+--- a/Source/WebCore/style/values/primitives/StylePrimitiveNumeric.h
++++ b/Source/WebCore/style/values/primitives/StylePrimitiveNumeric.h
+@@ -84,7 +84,7 @@ private:
+     //  - any floating point value (using NaN).
+     //  - any numeric value where the minimum allowed value is greater than 0 (using 0).
+     //  - any numeric value where the minimum allowed value is equal to 0 and the minimum representable value is not zero (using -1).
+-    static consteval ResolvedValueType emptyValue()
++    static constexpr ResolvedValueType emptyValue()
+     {
+         if constexpr (std::floating_point<ResolvedValueType>)
+             return std::numeric_limits<ResolvedValueType>::quiet_NaN();
+-- 
+2.48.1
+

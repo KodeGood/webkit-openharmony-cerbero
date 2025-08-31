@@ -9,7 +9,10 @@ class Recipe(recipe.Recipe):
     stype = SourceType.TARBALL
     url = 'gnu://.tar.gz'
     tarball_checksum = 'e6a1b1b589654277ee790cce3734f07876ac4ccfaecbee8afa0b649cf529cc04'
-    patches = ['libiconv/0001-lib-Only-rename-locale_charset-for-libiconv-not-libc.patch',]
+    patches = [
+        'libiconv/0001-lib-Only-rename-locale_charset-for-libiconv-not-libc.patch',
+        'libiconv/0002-Add-OHOS-support.patch',
+    ]
 
     configure_options = '--disable-nls --enable-static'
     autoreconf_sh = './autogen.sh --skip-gnulib && autoreconf -fiv'
@@ -24,3 +27,6 @@ class Recipe(recipe.Recipe):
         # Don't artificially force a libtool dependency when compiling as a build tool
         if self.config.prefix == self.config.build_tools_prefix:
             self.override_libtool = False
+        if self.config.target_platform == Platform.OHOS:
+            self.append_env('LIBICONV_VERSION_ARG', '-avoid-version')
+            self.append_env('LIBCHARSET_VERSION_ARG', '-avoid-version')

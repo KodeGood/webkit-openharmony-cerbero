@@ -1,5 +1,7 @@
 # -*- Mode: Python -*- vi:si:et:sw=4:sts=4:ts=4:syntax=python
 
+from cerbero.utils import shell
+
 class Recipe(recipe.Recipe):
     name = 'gettext'
     version = '0.21'
@@ -7,6 +9,7 @@ class Recipe(recipe.Recipe):
     url = 'https://ftp.gnu.org/pub/gnu/gettext/gettext-{0}.tar.gz'.format(version)
     tarball_checksum = 'c77d0da3102aec9c07f43671e60611ebff89a996ef159497ce8e59d075786b12'
     srcdir = 'gettext-runtime'
+    patches = ['gettext/0001-Add-OHOS-support.patch']
 
     files_libs = ['libintl']
 
@@ -20,3 +23,7 @@ class Recipe(recipe.Recipe):
                 self.append_env('LDFLAGS', '-lc')
             else:
                 self.deps.append('libiconv')
+        if self.config.target_platform == Platform.OHOS:
+            self.autoreconf = True
+            self.autoreconf_sh = 'cd {} && AUTOPOINT=true autoreconf -f -i'.format(self.srcdir)
+            self.append_env('LDFLAGS', '-lc++_shared -lc')

@@ -1,0 +1,48 @@
+From ca6f8fc368e977ede62f87ddc06f8c333241eaec Mon Sep 17 00:00:00 2001
+From: Jani Hautakangas <jani@kodegood.com>
+Date: Tue, 2 Sep 2025 21:43:52 +0300
+Subject: [PATCH 01/10] Switch TextUnderElementMode to braced init
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Clang 15/libc++ on OHOS rejects `TextUnderElementMode(...)` because
+there’s no converting constructor and parenthesized aggregate init isn’t
+supported. Use aggregate initialization instead:
+
+Reviewed by NOBODY (OOPS!).
+
+Explanation of why this fixes the bug (OOPS!).
+
+* Source/WebCore/accessibility/atspi/AccessibilityObjectTextAtspi.cpp:
+(WebCore::AccessibilityObjectAtspi::text const):
+(WebCore::AccessibilityObject::getLengthForTextRange const):
+---
+ .../accessibility/atspi/AccessibilityObjectTextAtspi.cpp      | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/Source/WebCore/accessibility/atspi/AccessibilityObjectTextAtspi.cpp b/Source/WebCore/accessibility/atspi/AccessibilityObjectTextAtspi.cpp
+index 016da7f54e10..40ac228007ff 100644
+--- a/Source/WebCore/accessibility/atspi/AccessibilityObjectTextAtspi.cpp
++++ b/Source/WebCore/accessibility/atspi/AccessibilityObjectTextAtspi.cpp
+@@ -289,7 +289,7 @@ String AccessibilityObjectAtspi::text() const
+     if (!value.isNull())
+         return value;
+ 
+-    auto text = m_coreObject->textUnderElement(TextUnderElementMode(TextUnderElementMode::Children::IncludeAllChildren));
++    auto text = m_coreObject->textUnderElement({ TextUnderElementMode::Children::IncludeAllChildren });
+     if (auto* renderer = m_coreObject->renderer()) {
+         if (is<RenderListItem>(*renderer) && downcast<RenderListItem>(*renderer).markerRenderer()) {
+             if (renderer->writingMode().isBidiLTR()) {
+@@ -315,7 +315,7 @@ unsigned AccessibilityObject::getLengthForTextRange() const
+         textLength = downcast<RenderText>(*renderer).text().length();
+ 
+     if (!textLength && allowsTextRanges())
+-        textLength = textUnderElement(TextUnderElementMode(TextUnderElementMode::Children::IncludeAllChildren)).length();
++        textLength = textUnderElement({ TextUnderElementMode::Children::IncludeAllChildren }).length();
+ 
+     return textLength;
+ }
+-- 
+2.48.1
+

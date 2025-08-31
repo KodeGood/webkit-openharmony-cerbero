@@ -19,6 +19,7 @@ class SDKPackage(package.SDKPackage):
         '.scenario',
         '.conf',
         '.py',
+        '.gresource',
         'gst-env',
         'gst-shell',
         'gst-validate-launcher',

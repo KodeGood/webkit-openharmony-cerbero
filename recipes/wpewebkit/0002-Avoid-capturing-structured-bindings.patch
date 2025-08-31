@@ -1,0 +1,86 @@
+From 1fec6147d688e5e3d536e6631ea5e62c47355c5e Mon Sep 17 00:00:00 2001
+From: Jani Hautakangas <jani@kodegood.com>
+Date: Tue, 2 Sep 2025 22:02:12 +0300
+Subject: [PATCH 02/10] Avoid capturing structured bindings
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Older Clang toolchains (e.g. on OHOS) reject referencing/capturing names
+introduced by structured bindings inside a nested lambda, causing
+“reference to local binding …” errors. Replace the structured binding
+with explicit temporaries before the lambda. No functional change.
+
+Reviewed by NOBODY (OOPS!).
+
+Explanation of why this fixes the bug (OOPS!).
+---
+ Source/WebCore/dom/DocumentFullscreen.cpp  | 6 +++++-
+ Source/WebCore/editing/Editing.cpp         | 6 +++++-
+ Source/WebCore/rendering/RenderElement.cpp | 9 +++++++--
+ 3 files changed, 17 insertions(+), 4 deletions(-)
+
+diff --git a/Source/WebCore/dom/DocumentFullscreen.cpp b/Source/WebCore/dom/DocumentFullscreen.cpp
+index 67c4d0097255..043bd8cb7327 100644
+--- a/Source/WebCore/dom/DocumentFullscreen.cpp
++++ b/Source/WebCore/dom/DocumentFullscreen.cpp
+@@ -741,7 +741,11 @@ void DocumentFullscreen::dispatchPendingEvents()
+ 
+     // Step 3:
+     while (!pendingEvents.isEmpty()) {
+-        auto [eventType, element] = pendingEvents.takeFirst();
++        // Avoid structured binding here because older Clang versions
++        // don’t allow referencing/capturing structured bindings in a nested lambda.
++        auto nextEvent = pendingEvents.takeFirst(); // pair<EventType, GCReachableRef<Element>>
++        auto eventType = nextEvent.first;
++        auto element = WTFMove(nextEvent.second); // GCReachableRef is move-only
+ 
+         // Gaining or losing fullscreen state may change viewport arguments
+         element->protectedDocument()->updateViewportArguments();
+diff --git a/Source/WebCore/editing/Editing.cpp b/Source/WebCore/editing/Editing.cpp
+index fc1671ff150d..156dcbad1836 100644
+--- a/Source/WebCore/editing/Editing.cpp
++++ b/Source/WebCore/editing/Editing.cpp
+@@ -1506,7 +1506,11 @@ SimpleRange adjustToVisuallyContiguousRange(const SimpleRange& range)
+ 
+ EnclosingLayerInfomation computeEnclosingLayer(const SimpleRange& range)
+ {
+-    auto [start, end] = positionsForRange(range);
++    // Avoid structured binding here because some Clang configs don’t allow
++    // referencing/capturing structured bindings in nested contexts.
++    auto positions = positionsForRange(range);
++    auto start = positions.start;
++    auto end = positions.end;
+ 
+     if (start.isOrphan() || end.isOrphan())
+         return { };
+diff --git a/Source/WebCore/rendering/RenderElement.cpp b/Source/WebCore/rendering/RenderElement.cpp
+index 5eb971e346a4..58ff3a8bd16d 100644
+--- a/Source/WebCore/rendering/RenderElement.cpp
++++ b/Source/WebCore/rendering/RenderElement.cpp
+@@ -1494,7 +1494,10 @@ bool RenderElement::repaintAfterLayoutIfNeeded(SingleThreadWeakPtr<const RenderL
+     auto insetShadowExtent = Style::shadowInsetExtent(style.boxShadow());
+     auto sizeDelta = LayoutSize { absoluteValue(newOutlineBoundsRect.width() - oldOutlineBoundsRect.width()), absoluteValue(newOutlineBoundsRect.height() - oldOutlineBoundsRect.height()) };
+     if (sizeDelta.width()) {
+-        auto [shadowLeft, shadowRight] = Style::shadowHorizontalExtent(style.boxShadow());
++        auto shadowHorizontal = Style::shadowHorizontalExtent(style.boxShadow());
++        // Avoid structured bindings: some Clang configs reject referencing them in nested scopes.
++        auto shadowLeft  = std::get<0>(shadowHorizontal);
++        auto shadowRight = std::get<1>(shadowHorizontal);
+ 
+         auto insetExtent = [&] {
+             // Inset "content" is inside the border box (e.g. border, negative outline and box shadow).
+@@ -1538,7 +1541,9 @@ bool RenderElement::repaintAfterLayoutIfNeeded(SingleThreadWeakPtr<const RenderL
+         }
+     }
+     if (sizeDelta.height()) {
+-        auto [shadowTop, shadowBottom] = Style::shadowVerticalExtent(style.boxShadow());
++        auto shadowVertical = Style::shadowVerticalExtent(style.boxShadow());
++        auto shadowTop    = std::get<0>(shadowVertical);
++        auto shadowBottom = std::get<1>(shadowVertical);
+ 
+         auto insetExtent = [&] {
+             // Inset "content" is inside the border box (e.g. border, negative outline and box shadow).
+-- 
+2.48.1
+

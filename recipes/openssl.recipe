@@ -33,6 +33,8 @@ class Recipe(recipe.Recipe):
         'openssl/0002-win-onecore-Build-with-APPCONTAINER-for-UWP-compat.patch',
         # Android support
         'openssl/0003-openssl-Support-loading-ca-certificates-on-Android.patch',
+        # OpenHarmony support and unversioned shared libraries
+        'openssl/0004-Add-OHOS-support.patch',
     ]
 
     files_bins = ['openssl']
@@ -67,6 +69,14 @@ class Recipe(recipe.Recipe):
             if self.config.target_arch == Architecture.X86_64:
                 return 'android-x86_64'
             raise InvalidRecipeError(self, "Unknown Android platform")
+        if self.config.target_platform == Platform.OHOS:
+            self.make += ['CROSS_SYSROOT=' + self.config.sysroot]
+            if self.config.target_arch == Architecture.ARM64:
+                return 'ohos-arm64'
+            if self.config.target_arch == Architecture.X86_64:
+                return 'ohos-x86_64'
+            raise InvalidRecipeError(self, 'Unsupported OpenHarmony architecture: {}'
+                                     .format(self.config.target_arch))
         if self.config.target_platform == Platform.DARWIN:
             if self.config.target_arch == Architecture.X86:
                 return 'darwin-i386-cc'
@@ -110,6 +120,11 @@ class Recipe(recipe.Recipe):
                 if self.config.target_arch == Architecture.X86_64:
                     return 'mingw64'
             raise InvalidRecipeError(self, "Unknown Windows platform")
+        if self.config.target_platform == Platform.OHOS:
+            self.make += ['CROSS_SYSROOT=' + self.config.sysroot]
+            if self.config.target_arch == Architecture.ARM64:
+                return 'linux-aarch64'
+            raise InvalidRecipeError(self, "Unknown OpenHarmony platform")
         raise InvalidRecipeError(self, "Unknown target platform {}"
                                  .format(self.config.target_platform))
 
@@ -150,7 +165,7 @@ class Recipe(recipe.Recipe):
             self.make_install = ['make', 'install_sw', 'RANLIB=' + ranlib]
 
         # We probably don't need and can't use the tools on these platforms
-        if self.config.target_platform in (Platform.IOS, Platform.ANDROID):
+        if self.config.target_platform in [Platform.IOS, Platform.ANDROID, Platform.OHOS]:
             self.make += ['build_libs', 'openssl.pc', 'libssl.pc', 'libcrypto.pc']
             self.make_install = ['make', 'install_dev', 'RANLIB=' + ranlib]
 
@@ -185,6 +200,8 @@ class Recipe(recipe.Recipe):
             self.library_type = LibraryType.STATIC
         if self.config.target_platform == Platform.ANDROID:
             self.prepend_env('PATH', self.get_env('ANDROID_NDK_TOOLCHAIN_BIN'), sep=os.pathsep)
+        if self.config.target_platform == Platform.OHOS:
+            self.prepend_env('PATH', self.get_env('OHOS_SDK_NATIVE_TOOLCHAIN_BIN'), sep=os.pathsep)
 
 
     @modify_environment
@@ -224,8 +241,12 @@ class Recipe(recipe.Recipe):
             else:
                 raise AssertionError
 
-        if self.config.target_platform == Platform.ANDROID:
+        if self.config.target_platform in [Platform.ANDROID, Platform.OHOS]:
             config_sh += ' --openssldir=/system/etc/security '
+
+        #if (self.config.target_platform == Platform.OHOS):
+        #    shell.new_call(['autoreconf', '-if'], self.build_dir)
+
 
         await shell.async_call(config_sh + self.openssl_platform, self.build_dir,
                                logfile=self.logfile, env=self.env)

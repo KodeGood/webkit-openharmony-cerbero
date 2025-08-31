@@ -43,7 +43,6 @@ class Recipe(custom.GStreamer):
                      'srtp': 'enabled',
                      'resindvd': 'enabled',
                      'rist' : 'enabled',
-                     'rsvg': 'enabled',
                      'voaacenc': 'enabled',
                      'vulkan': 'enabled',
                      'webrtc': 'enabled',
@@ -85,13 +84,14 @@ class Recipe(custom.GStreamer):
     deps = ['gstreamer-1.0', 'gst-plugins-base-1.0', 'bzip2', 'libass',
             'zlib', 'openh264', 'opus', 'librtmp', 'libxml2',
             'libsrtp', 'libdca', 'libdvdnav', 'libnice',
-            'soundtouch', 'vo-aacenc', 'librsvg', 'openjpeg',
+            'soundtouch', 'vo-aacenc', 'openjpeg',
             'pango', 'spandsp', 'webrtc-audio-processing', 'sbc', 'ladspa',
             'srt', 'zbar', 'libltc']
     use_system_libs = True
 
     patches = [
-        'gst-plugins-bad/0001-gst-plugins-bad-Only-Android-API-33-and-higher-suppo.patch'
+        'gst-plugins-bad/0001-gst-plugins-bad-Only-Android-API-33-and-higher-suppo.patch',
+        'gst-plugins-bad/0001-Add-OHOS-support.patch'
     ]
 
     files_lang = ['gst-plugins-bad-1.0']
@@ -467,6 +467,10 @@ class Recipe(custom.GStreamer):
         Platform.ANDROID: [
              '%(libdir)s/gstreamer-1.0/libgstopensles%(mext)s',
             ]
+# TODO:
+#       Platform.OHOS: [
+#             '%(libdir)s/gstreamer-1.0/libgstopensles%(mext)s',
+#            ]
     }
 
     platform_files_plugins_sys_devel = {
@@ -492,6 +496,10 @@ class Recipe(custom.GStreamer):
         Platform.ANDROID: [
              '%(libdir)s/gstreamer-1.0/libgstopensles.a', '%(libdir)s/gstreamer-1.0/libgstopensles.la',
             ]
+# TODO
+#        Platform.ANDROID: [
+#             '%(libdir)s/gstreamer-1.0/libgstopensles.a', '%(libdir)s/gstreamer-1.0/libgstopensles.la',
+#            ]
     }
 
     files_typelibs = [
@@ -576,6 +584,8 @@ class Recipe(custom.GStreamer):
             self.deps += ['moltenvk']
         if self.config.target_platform in (Platform.ANDROID):
             self.deps += ['vulkan-android']
+        if self.config.target_platform in (Platform.OHOS):
+            self.meson_options['opensles'] = 'disabled'
 
         # TODO: Vulkan support on Linux and Windows
         # No MoltenVK available for iOS x86_64
@@ -585,7 +595,7 @@ class Recipe(custom.GStreamer):
                 (self.config.target_platform == Platform.DARWIN and self.config.target_arch == Architecture.ARM64):
             self.disable_plugin('vulkan', 'vulkan', library_name='vulkan')
 
-        if self.config.target_platform in (Platform.ANDROID, Platform.IOS):
+        if self.config.target_platform in [Platform.ANDROID, Platform.IOS, Platform.OHOS]:
             self.disable_plugin('resindvd', 'dvd', dep='libdvdnav')
 
         # Recipes that need autoreconf hang on the Windows CI
@@ -626,7 +636,7 @@ class Recipe(custom.GStreamer):
             self.disable_plugin('amfcodec', 'codecs')
             self.disable_plugin('nvcodec', 'codecs')
             self.disable_plugin('qsv', 'codecs')
-        elif self.config.target_platform == Platform.ANDROID:
+        elif self.config.target_platform in [Platform.ANDROID, Platform.OHOS]:
             self.disable_plugin('rsvg', 'codecs', dep='librsvg')
 
         if self.meson_options['nvcodec'] == 'enabled':

@@ -10,6 +10,7 @@ class Recipe(recipe.Recipe):
     tarball_checksum = '57be87c22d9b49c112b6d24bc67d42508660e6b718b3db89c44e47e289137082'
     patches = [
         name + '/0001-Add-Meson-build.patch',
+        name + '/0001-Add-OHOS-support.patch',
     ]
 
     btype = BuildType.MESON

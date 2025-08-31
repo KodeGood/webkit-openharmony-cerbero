@@ -10,3 +10,13 @@ class Recipe(recipe.Recipe):
 
     files_libs = ['libepoxy']
     files_devel  = ['include/epoxy', 'lib/pkgconfig/epoxy.pc']
+
+    patches = ['libepoxy/0001-Add-support-for-OpenHarmony.patch']
+
+    def prepare(self):
+        if self.config.target_platform == Platform.OHOS:
+            self.meson_options['glx'] = 'no'
+            self.meson_options['egl'] = 'yes'
+            self.meson_options['x11'] = 'false'
+            self.meson_options['tests'] = 'false'
+

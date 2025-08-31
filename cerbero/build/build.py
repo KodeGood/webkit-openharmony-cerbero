@@ -37,7 +37,7 @@ from cerbero.utils import messages as m
 
 def get_optimization_from_config(config):
     if config.variants.optimization:
-        if config.target_platform in (Platform.ANDROID, Platform.IOS):
+        if config.target_platform in [Platform.ANDROID, Platform.IOS, Platform.OHOS]:
             return 's'
         return '2'
     return '0'
@@ -682,7 +682,7 @@ class CMake (MakefilesBase):
 
         if self.config.target_platform == Platform.WINDOWS:
             system_name = 'Windows'
-        elif self.config.target_platform in (Platform.LINUX, Platform.ANDROID):
+        elif self.config.target_platform in (Platform.LINUX, Platform.ANDROID, Platform.OHOS):
             system_name = 'Linux'
         elif self.config.target_platform == Platform.DARWIN:
             system_name = 'Darwin'
@@ -1021,6 +1021,12 @@ class Meson (Build, ModifyEnvBase) :
             ar = "toolchain / 'llvm-ar'"
             objc = cc
             objcxx = cxx
+        elif self.config.target_platform == Platform.OHOS:
+            cc = "toolchain / 'clang'"
+            cxx = "toolchain / 'clang++'"
+            ar = "toolchain / 'llvm-ar'"
+            objc = cc
+            objcxx = cxx
         else:
             cc = ['cc']
             cxx = ['c++']
@@ -1034,7 +1040,11 @@ class Meson (Build, ModifyEnvBase) :
                 cpu=self.config.arch,
                 cpu_family=self.config.arch,
                 endian='little',
-                toolchain=self.get_env('ANDROID_NDK_TOOLCHAIN_BIN', ''),
+                toolchain = (
+                    self.get_env('ANDROID_NDK_TOOLCHAIN_BIN', '')
+                    or self.get_env('OHOS_SDK_NATIVE_TOOLCHAIN_BIN', '')
+                    or ''
+                ),
                 CC=cc,
                 CXX=cxx,
                 OBJC=objc,
@@ -1229,7 +1239,7 @@ class Cargo(Build, ModifyEnvBase):
             self.cargo_args += [f'-j{jobs}']
 
         # https://github.com/lu-zero/cargo-c/issues/278
-        if self.config.target_platform in (Platform.ANDROID, Platform.IOS):
+        if self.config.target_platform in [Platform.ANDROID, Platform.IOS, Platform.OHOS]:
             self.library_type = LibraryType.STATIC
 
     def num_of_cpus(self):
@@ -1298,6 +1308,18 @@ class Cargo(Build, ModifyEnvBase):
         if self.config.target_platform == Platform.ANDROID:
             # Use the compiler's forwarding
             # See https://android.googlesource.com/platform/ndk/+/master/docs/BuildSystemMaintainers.md#linkers
+            linker = self.get_env('RUSTC_LINKER')
+            link_args = []
+            # We need to extract necessary linker flags from LDFLAGS which is
+            # passed to the compiler
+            for arg in shlex.split(self.get_env('LDFLAGS', '')):
+                link_args += ['-C', f"link-arg={arg}"]
+            s = f'[target.{self.target_triple}]\n' \
+                f'linker = "{linker}"\n' \
+                f'rustflags = {link_args!r}\n'
+            self.append_config_toml(s)
+        elif self.config.target_platform == Platform.OHOS:
+            # Use the compiler's forwarding
             linker = self.get_env('RUSTC_LINKER')
             link_args = []
             # We need to extract necessary linker flags from LDFLAGS which is

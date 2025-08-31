@@ -8,7 +8,7 @@ class Recipe(recipe.Recipe):
     url = f'https://wpewebkit.org/releases/wpewebkit-{version}.tar.xz'
     tarball_checksum = 'a9af62c5e18551b7386b7db864e8ba8156f219b8e6c639934bf6f3a567969922'
     deps = [
-        'icu',
+        'breakpad',
         'cairo',
         'freetype',
         'gettext',
@@ -17,6 +17,7 @@ class Recipe(recipe.Recipe):
         'gst-plugins-good-1.0',
         'gst-plugins-bad-1.0',
         'harfbuzz',
+        'icu',
         'libepoxy',
         'libgcrypt',
         'libjpeg-turbo',
@@ -38,6 +39,7 @@ class Recipe(recipe.Recipe):
         -DENABLE_JOURNALD_LOG=OFF \
         -DENABLE_BUBBLEWRAP_SANDBOX=OFF \
         -DENABLE_SPEECH_SYNTHESIS=OFF \
+        -DENABLE_BREAKPAD=OFF \
         -DUSE_ATK=OFF \
         -DUSE_LCMS=OFF \
         -DUSE_AVIF=OFF \
@@ -47,15 +49,16 @@ class Recipe(recipe.Recipe):
         -DUSE_LIBBACKTRACE=OFF \
         -DUSE_SKIA_OPENTYPE_SVG=OFF \
         -DUSE_SYSPROF_CAPTURE=OFF \
-        -DENABLE_WEBDRIVER=ON \
-        -DENABLE_WPE_PLATFORM=OFF \
+        -DENABLE_WEBDRIVER=OFF \
+        -DENABLE_WPE_PLATFORM=ON \
+        -DENABLE_WPE_PLATFORM_DRM=OFF \
+        -DENABLE_WPE_PLATFORM_WAYLAND=OFF \
         -DCMAKE_BUILD_TYPE=Release \
     '
     cmake_generator = 'ninja'
 
     files_libs = [
         'libWPEWebKit-2.0',
-        'libWPEWebDriver'
     ]
 
     files_misc = [
@@ -68,13 +71,22 @@ class Recipe(recipe.Recipe):
 
     files_devel = [
         'include/wpe-webkit-2.0',
+        'lib/pkgconfig/wpe-platform-2.0.pc',
         'lib/pkgconfig/wpe-webkit-2.0.pc',
         'lib/pkgconfig/wpe-web-process-extension-2.0.pc'
     ]
 
-    files_libexec = [
-        'libexec/wpe-webkit-2.0/WPENetworkProcess',
-        'libexec/wpe-webkit-2.0/WPEWebProcess',
+    patches = [
+        'wpewebkit/0001-Switch-TextUnderElementMode-to-braced-init.patch',
+        'wpewebkit/0002-Avoid-capturing-structured-bindings.patch',
+        'wpewebkit/0003-Fix-sentinel-warning.patch',
+        'wpewebkit/0004-Use-aggregate-initialization-for-CompositeMode-to-fi.patch',
+        'wpewebkit/0005-Provide-guarded-source_location-polyfill-for-toolcha.patch',
+        'wpewebkit/0006-Relax-consteval-constexpr-for-StylePrimitiveNumeric-.patch',
+        'wpewebkit/0007-Fix-dependent-type-qualifiers.patch',
+        'wpewebkit/0008-WPEPlatform-Introduce-support-for-OpenHarmony-platfo.patch',
+        'wpewebkit/0009-Create-unversioned-libWPEWebKit.patch',
+        'wpewebkit/0010-Log-messages-to-the-HiLog.patch'
     ]
 
     def prepare(self):
@@ -101,6 +113,14 @@ class Recipe(recipe.Recipe):
             self.configure_options += ' -DANDROID=1'
             # Placeholder to allow enabling debug externally
             self.append_env('WEBKIT_DEBUG', '')
+        if self.config.target_platform == Platform.OHOS:
+            self.configure_options += ' -DCMAKE_SYSTEM_PROCESSOR=' + self.config.target_arch
+            self.configure_options += ' -DOHOS=1'
+            self.configure_options += ' -DWPE_PLATFORM_BUFFER_OHOS=1'
+            self.configure_options += ' -DBREAKPAD_MINIDUMP_DIR=/data/storage/el2/base/files/'
+            self.append_env('CXXFLAGS', '-std=c++20')
+            self.append_env('CXXFLAGS', '-fexperimental-library')
+            self.append_env('LDFLAGS', '-lintl')
         else:
             self.append_env('LDFLAGS', '-lrt')
             self.configure_options += ' -DCMAKE_SYSTEM_PROCESSOR=' + self.config.target_arch

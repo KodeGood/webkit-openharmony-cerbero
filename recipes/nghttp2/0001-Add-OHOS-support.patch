@@ -1,0 +1,32 @@
+From ef4e25bc26538a51f6f272648cf303fcce1e1294 Mon Sep 17 00:00:00 2001
+From: Jani Hautakangas <jani@kodegood.com>
+Date: Sun, 5 Oct 2025 19:30:49 +0300
+Subject: [PATCH] Add OHOS support
+
+---
+ lib/CMakeLists.txt | 2 --
+ 1 file changed, 2 deletions(-)
+
+diff --git a/lib/CMakeLists.txt b/lib/CMakeLists.txt
+index fda8dcb..010cbe5 100644
+--- a/lib/CMakeLists.txt
++++ b/lib/CMakeLists.txt
+@@ -55,7 +55,6 @@ if(BUILD_SHARED_LIBS)
+ 
+   set_target_properties(${SHARED_LIB} PROPERTIES
+     COMPILE_FLAGS "${WARNCFLAGS}"
+-    VERSION ${LT_VERSION} SOVERSION ${LT_SOVERSION}
+     C_VISIBILITY_PRESET hidden
+   )
+ 
+@@ -75,7 +74,6 @@ if(BUILD_STATIC_LIBS)
+ 
+   set_target_properties(${STATIC_LIB} PROPERTIES
+     COMPILE_FLAGS "${WARNCFLAGS}"
+-    VERSION ${LT_VERSION} SOVERSION ${LT_SOVERSION}
+     ARCHIVE_OUTPUT_NAME nghttp2${STATIC_LIB_SUFFIX}
+   )
+ 
+-- 
+2.48.1
+

@@ -1,0 +1,38 @@
+From 1b23ec4533adc45ba8482d382094eef6c890dab7 Mon Sep 17 00:00:00 2001
+From: Jani Hautakangas <jani@kodegood.com>
+Date: Tue, 2 Sep 2025 23:07:00 +0300
+Subject: [PATCH 04/10] Use aggregate initialization for CompositeMode to fix
+ build
+
+CompositeMode is an aggregate (default/copy/move only). Constructing it
+with parentheses attempts to call a non-existent two-argument ctor and
+fails with Clang on OHOS. Use brace-initialization instead.
+
+No functional change.
+
+Reviewed by NOBODY (OOPS!).
+
+Explanation of why this fixes the bug (OOPS!).
+
+* Source/WebCore/platform/graphics/skia/GraphicsContextSkia.cpp:
+(WebCore::GraphicsContextSkia::beginTransparencyLayer):
+---
+ Source/WebCore/platform/graphics/skia/GraphicsContextSkia.cpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/Source/WebCore/platform/graphics/skia/GraphicsContextSkia.cpp b/Source/WebCore/platform/graphics/skia/GraphicsContextSkia.cpp
+index f58ef344afd5..7b6b65371610 100644
+--- a/Source/WebCore/platform/graphics/skia/GraphicsContextSkia.cpp
++++ b/Source/WebCore/platform/graphics/skia/GraphicsContextSkia.cpp
+@@ -775,7 +775,7 @@ void GraphicsContextSkia::beginTransparencyLayer(CompositeOperator operation, Bl
+         return;
+ 
+     GraphicsContext::beginTransparencyLayer(operation, blendMode);
+-    m_layerStateStack.append({ CompositeMode(operation, blendMode) });
++    m_layerStateStack.append({ CompositeMode { operation, blendMode } });
+ 
+     SkPaint paint;
+     paint.setBlendMode(toSkiaBlendMode(operation, blendMode));
+-- 
+2.48.1
+

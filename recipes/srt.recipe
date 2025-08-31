@@ -23,10 +23,14 @@ class Recipe(recipe.Recipe):
     files_libs = ['libsrt']
     files_devel = ['include/srt', '%(libdir)s/pkgconfig/srt.pc']
 
+    patches = [
+        name + '/0001-Add-OHOS-support.patch'
+    ]
+
     def prepare(self):
         if self.config.target_platform != Platform.LINUX or self.config.cross_compiling():
             self.deps.append('openssl')
-        if self.config.target_platform == Platform.ANDROID:
+        if self.config.target_platform in [Platform.ANDROID, Platform.OHOS]:
             self.append_env('CXXFLAGS', '-frtti', '-fexceptions')
 
     def post_install(self):

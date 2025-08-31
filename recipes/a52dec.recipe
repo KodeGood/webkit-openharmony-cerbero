@@ -20,7 +20,7 @@ class Recipe(recipe.Recipe):
     files_devel = ['include/a52dec']
 
     def prepare(self):
-        if self.config.target_platform == Platform.ANDROID:
+        if self.config.target_platform in [Platform.ANDROID, Platform.OHOS]:
             self.configure_options += ' --disable-oss'
         self.append_env('CFLAGS', '-fPIC')
         # Don't enable always-inline, breaks the build on windows and macos (space is significant)

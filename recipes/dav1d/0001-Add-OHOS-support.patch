@@ -1,0 +1,25 @@
+From dc635dcb7ba839fb3bd649e235514e9736899457 Mon Sep 17 00:00:00 2001
+From: Jani Hautakangas <jani@kodegood.com>
+Date: Sun, 5 Oct 2025 00:44:15 +0300
+Subject: [PATCH] Add OHOS support
+
+---
+ meson.build | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/meson.build b/meson.build
+index 4155a01..b981685 100644
+--- a/meson.build
++++ b/meson.build
+@@ -89,7 +89,7 @@ test_args = []
+ optional_arguments = []
+ optional_link_arguments = []
+ 
+-if host_machine.system() in ['linux', 'gnu']
++if host_machine.system() in ['linux', 'gnu', 'ohos']
+     test_args += '-D_GNU_SOURCE'
+     add_project_arguments('-D_GNU_SOURCE', language: 'c')
+ endif
+-- 
+2.48.1
+

@@ -27,6 +27,7 @@ from cerbero.packages.packager import Packager
 from cerbero.packages.packagesstore import PackagesStore
 from cerbero.packages.disttarball import DistTarball
 from cerbero.packages.android import AndroidPackager
+from cerbero.packages.ohos import OhosPackager
 
 
 class Package(Command):
@@ -139,6 +140,8 @@ class Package(Command):
         if args.tarball:
             if config.target_platform == Platform.ANDROID and config.target_arch == Architecture.UNIVERSAL:
                 packager_class = AndroidPackager
+            elif config.target_platform == Platform.OHOS:
+                packager_class = OhosPackager
             else:
                 packager_class = DistTarball
         elif config.variants.uwp:

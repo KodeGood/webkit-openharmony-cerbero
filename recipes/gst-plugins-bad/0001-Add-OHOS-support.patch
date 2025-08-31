@@ -1,0 +1,55 @@
+From 29660b8615411c8b6d4d0aceec585468a2596a39 Mon Sep 17 00:00:00 2001
+From: Jani Hautakangas <jani@kodegood.com>
+Date: Mon, 1 Sep 2025 22:41:23 +0300
+Subject: [PATCH] Add OHOS support
+
+---
+ ext/sctp/usrsctp/meson.build      | 2 +-
+ sys/opensles/openslescommon.h     | 4 +---
+ sys/opensles/openslesringbuffer.h | 2 +-
+ 3 files changed, 3 insertions(+), 5 deletions(-)
+
+diff --git a/ext/sctp/usrsctp/meson.build b/ext/sctp/usrsctp/meson.build
+index 6a1ab84..9fc92c2 100644
+--- a/ext/sctp/usrsctp/meson.build
++++ b/ext/sctp/usrsctp/meson.build
+@@ -55,7 +55,7 @@ compile_args += [
+ 
+ # OS-specific settings
+ system = host_machine.system()
+-if system in ['linux', 'android']
++if system in ['linux', 'android', 'ohos']
+     compile_args += [
+         '-D_GNU_SOURCE',
+     ]
+diff --git a/sys/opensles/openslescommon.h b/sys/opensles/openslescommon.h
+index 2b619eb..9a2d632 100644
+--- a/sys/opensles/openslescommon.h
++++ b/sys/opensles/openslescommon.h
+@@ -24,9 +24,7 @@
+ #include <gst/gst.h>
+ 
+ #include <SLES/OpenSLES.h>
+-#include <SLES/OpenSLES_Android.h>
+-/* This is needed explicitly for API level < 14 */
+-#include <SLES/OpenSLES_AndroidConfiguration.h>
++#include <SLES/OpenSLES_OpenHarmony.h>
+ 
+ G_BEGIN_DECLS
+ 
+diff --git a/sys/opensles/openslesringbuffer.h b/sys/opensles/openslesringbuffer.h
+index 2b90d36..e6c0231 100644
+--- a/sys/opensles/openslesringbuffer.h
++++ b/sys/opensles/openslesringbuffer.h
+@@ -25,7 +25,7 @@
+ #include "openslescommon.h"
+ 
+ #include <SLES/OpenSLES.h>
+-#include <SLES/OpenSLES_Android.h>
++#include <SLES/OpenSLES_OpenHarmony.h>
+ 
+ G_BEGIN_DECLS
+ 
+-- 
+2.48.1
+

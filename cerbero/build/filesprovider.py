@@ -126,6 +126,7 @@ class FilesProvider(object):
     # major, minor, micro. We don't use {m,n} here because we want to capture
     # all the matches.
     _ANDROID_SO_REGEX = r'^lib{}\.so(\.[0-9]+)?(\.[0-9]+)?(\.[0-9]+)?$'
+    _OHOS_SO_REGEX = r'^lib{}\.so(\.[0-9]+)?(\.[0-9]+)?(\.[0-9]+)?$'
     # Like _ANDROID_SO_REGEX but only libs with version number.
     _LINUX_SO_REGEX = r'^lib{}\.so(\.[0-9]+)(\.[0-9]+)?(\.[0-9]+)?$'
     _DYLIB_REGEX = r'^lib{}(\.[0-9]+)?(\.[0-9]+)?(\.[0-9]+)?\.dylib$'
@@ -149,7 +150,9 @@ class FilesProvider(object):
         Platform.DARWIN: {'bext': '', 'sregex': _DYLIB_REGEX,
             'mext': '.so', 'smext': '.a', 'pext': '.so', 'srext': '.dylib'},
         Platform.IOS: {'bext': '', 'sregex': _DYLIB_REGEX,
-            'mext': '.so', 'smext': '.a', 'pext': '.so', 'srext': '.dylib'}}
+            'mext': '.so', 'smext': '.a', 'pext': '.so', 'srext': '.dylib'},
+        Platform.OHOS: {'bext': '', 'sregex': _OHOS_SO_REGEX,
+            'mext': '.so', 'smext': '.a', 'pext': '.so', 'srext': '.so'}}
 
     # Match static gstreamer plugins, GIO modules, etc.
     _FILES_STATIC_PLUGIN_REGEX = re.compile(r'lib/.+/lib(gst|)([^/.]+)\.a')

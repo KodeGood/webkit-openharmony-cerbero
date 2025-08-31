@@ -1,0 +1,2581 @@
+From 78a88f0f0990e431d4574a6c1097bc6cee06ba16 Mon Sep 17 00:00:00 2001
+From: Jani Hautakangas <jani@kodegood.com>
+Date: Sat, 11 Oct 2025 12:00:00 +0000
+Subject: [PATCH 08/10] [WPEPlatform] Introduce support for OpenHarmony
+ platform
+
+---
+ Source/WTF/wtf/PlatformOS.h                   |   5 +
+ Source/WTF/wtf/PlatformWPE.cmake              |  10 +
+ Source/WTF/wtf/ohos/LoggingOHOS.cpp           |   0
+ Source/WTF/wtf/ohos/LoggingOHOS.h             |   0
+ Source/WTF/wtf/ohos/RefPtrOHOS.cpp            |  44 ++++
+ Source/WTF/wtf/ohos/RefPtrOHOS.h              |  38 +++
+ Source/WebCore/PlatformWPE.cmake              |   4 +
+ Source/WebCore/SourcesWPE.txt                 |   3 +
+ .../platform/graphics/PlatformDisplay.cpp     |   8 +-
+ .../platform/graphics/PlatformDisplay.h       |   4 +-
+ .../graphics/angle/PlatformDisplayANGLE.cpp   |   2 +-
+ .../platform/graphics/egl/GLDisplay.cpp       |  54 +++-
+ .../WebCore/platform/graphics/egl/GLDisplay.h |   5 +
+ .../graphics/egl/PlatformDisplayDefault.cpp   |   4 +-
+ .../graphics/egl/PlatformDisplayDefault.h     |   4 +-
+ .../graphics/ohos/BufferFormatOHOS.cpp        |  50 ++++
+ .../platform/graphics/ohos/BufferFormatOHOS.h |  33 +++
+ Source/WebKit/Platform/IPC/ArgumentCoders.h   |   2 +
+ Source/WebKit/Platform/IPC/Attachment.h       |   7 +
+ Source/WebKit/Platform/IPC/Connection.h       |  20 ++
+ .../Platform/IPC/ohos/ArgumentCodersOHOS.cpp  |  62 +++++
+ .../Platform/IPC/ohos/ArgumentCodersOHOS.h    |  37 +++
+ .../Platform/IPC/unix/ArgumentCodersUnix.cpp  |   4 +-
+ .../Platform/IPC/unix/ConnectionUnix.cpp      | 198 +++++++++++++--
+ Source/WebKit/Platform/IPC/unix/UnixMessage.h |  21 ++
+ Source/WebKit/PlatformWPE.cmake               |   1 +
+ .../WebKit/Shared/WebPageCreationParameters.h |   4 +-
+ ...WebPageCreationParameters.serialization.in |   2 +-
+ Source/WebKit/SourcesWPE.txt                  |   1 +
+ .../API/glib/WebKitProtocolHandler.cpp        |   3 +
+ Source/WebKit/UIProcess/WebPageProxy.cpp      |   2 +-
+ Source/WebKit/UIProcess/WebPageProxy.h        |   6 +-
+ .../glib/AcceleratedBackingStore.messages.in  |   3 +
+ .../glib/RendererBufferDescription.h          |   6 +-
+ .../UIProcess/wpe/AcceleratedBackingStore.cpp |  19 ++
+ .../UIProcess/wpe/AcceleratedBackingStore.h   |   7 +
+ .../WebKit/UIProcess/wpe/WebPageProxyWPE.cpp  |  15 +-
+ Source/WebKit/WPEPlatform/CMakeLists.txt      |   6 +
+ .../WebKit/WPEPlatform/wpe/WPEBufferOHOS.cpp  | 237 ++++++++++++++++++
+ Source/WebKit/WPEPlatform/wpe/WPEBufferOHOS.h |  58 +++++
+ Source/WebKit/WPEPlatform/wpe/WPEConfig.h.in  |   1 +
+ Source/WebKit/WPEPlatform/wpe/wpe-platform.h  |   4 +
+ .../AcceleratedSurface.cpp                    | 109 +++++++-
+ .../CoordinatedGraphics/AcceleratedSurface.h  |  50 +++-
+ .../DrawingAreaCoordinatedGraphics.cpp        |   2 +-
+ .../DrawingAreaCoordinatedGraphics.h          |   2 +-
+ .../CoordinatedGraphics/LayerTreeHost.cpp     |   2 +-
+ .../CoordinatedGraphics/LayerTreeHost.h       |   2 +-
+ .../ThreadedCompositor.cpp                    |   2 +-
+ .../CoordinatedGraphics/ThreadedCompositor.h  |   2 +-
+ .../WebKit/WebProcess/WebPage/DrawingArea.h   |   2 +-
+ Source/WebKit/WebProcess/WebPage/WebPage.cpp  |   2 +-
+ Source/WebKit/WebProcess/WebPage/WebPage.h    |  12 +-
+ .../WebProcess/WebPage/WebPage.messages.in    |   2 +-
+ .../WebProcess/WebPage/wpe/WebPageWPE.cpp     |   2 +-
+ .../WebKit/WebProcess/glib/WebProcessGLib.cpp |   4 +-
+ Source/cmake/FindOHOS.cmake                   | 150 +++++++++++
+ Source/cmake/OptionsWPE.cmake                 |   9 +
+ 58 files changed, 1267 insertions(+), 81 deletions(-)
+ create mode 100644 Source/WTF/wtf/ohos/LoggingOHOS.cpp
+ create mode 100644 Source/WTF/wtf/ohos/LoggingOHOS.h
+ create mode 100644 Source/WTF/wtf/ohos/RefPtrOHOS.cpp
+ create mode 100644 Source/WTF/wtf/ohos/RefPtrOHOS.h
+ create mode 100644 Source/WebCore/platform/graphics/ohos/BufferFormatOHOS.cpp
+ create mode 100644 Source/WebCore/platform/graphics/ohos/BufferFormatOHOS.h
+ create mode 100644 Source/WebKit/Platform/IPC/ohos/ArgumentCodersOHOS.cpp
+ create mode 100644 Source/WebKit/Platform/IPC/ohos/ArgumentCodersOHOS.h
+ create mode 100644 Source/WebKit/WPEPlatform/wpe/WPEBufferOHOS.cpp
+ create mode 100644 Source/WebKit/WPEPlatform/wpe/WPEBufferOHOS.h
+ create mode 100644 Source/cmake/FindOHOS.cmake
+
+diff --git a/Source/WTF/wtf/PlatformOS.h b/Source/WTF/wtf/PlatformOS.h
+index e3184e90a160..77395aa69983 100644
+--- a/Source/WTF/wtf/PlatformOS.h
++++ b/Source/WTF/wtf/PlatformOS.h
+@@ -117,6 +117,11 @@
+ #define WTF_OS_NETBSD 1
+ #endif
+ 
++/* OS(OHOS) - OHOS */
++#if defined(__OHOS__) || defined(OHOS)
++#define WTF_OS_OHOS 1
++#endif
++
+ /* OS(OPENBSD) - OpenBSD */
+ #if defined(__OpenBSD__)
+ #define WTF_OS_OPENBSD 1
+diff --git a/Source/WTF/wtf/PlatformWPE.cmake b/Source/WTF/wtf/PlatformWPE.cmake
+index 5621ce9f59a5..c813fff49d2c 100644
+--- a/Source/WTF/wtf/PlatformWPE.cmake
++++ b/Source/WTF/wtf/PlatformWPE.cmake
+@@ -20,6 +20,9 @@ list(APPEND WTF_SOURCES
+     linux/CurrentProcessMemoryStatus.cpp
+     linux/RealTimeThreads.cpp
+ 
++    ohos/LoggingOHOS.cpp
++    ohos/RefPtrOHOS.cpp
++
+     posix/CPUTimePOSIX.cpp
+     posix/FileHandlePOSIX.cpp
+     posix/FileSystemPOSIX.cpp
+@@ -58,6 +61,9 @@ list(APPEND WTF_PUBLIC_HEADERS
+     linux/ProcessMemoryFootprint.h
+     linux/RealTimeThreads.h
+ 
++    ohos/LoggingOHOS.h
++    ohos/RefPtrOHOS.h
++
+     posix/SocketPOSIX.h
+ 
+     unix/UnixFileDescriptor.h
+@@ -79,6 +85,10 @@ if (ANDROID)
+     list(APPEND WTF_LIBRARIES Android::Android Android::Log)
+ endif ()
+ 
++if (OHOS)
++    list(APPEND WTF_LIBRARIES OHOS::NativeBuffer OHOS::Log)
++endif ()
++
+ list(APPEND WTF_SYSTEM_INCLUDE_DIRECTORIES
+     ${GIO_UNIX_INCLUDE_DIRS}
+     ${GLIB_INCLUDE_DIRS}
+diff --git a/Source/WTF/wtf/ohos/LoggingOHOS.cpp b/Source/WTF/wtf/ohos/LoggingOHOS.cpp
+new file mode 100644
+index 000000000000..e69de29bb2d1
+diff --git a/Source/WTF/wtf/ohos/LoggingOHOS.h b/Source/WTF/wtf/ohos/LoggingOHOS.h
+new file mode 100644
+index 000000000000..e69de29bb2d1
+diff --git a/Source/WTF/wtf/ohos/RefPtrOHOS.cpp b/Source/WTF/wtf/ohos/RefPtrOHOS.cpp
+new file mode 100644
+index 000000000000..bf2c9a9df073
+--- /dev/null
++++ b/Source/WTF/wtf/ohos/RefPtrOHOS.cpp
+@@ -0,0 +1,44 @@
++/*
++ * Copyright (C) 2025 Jani Hautakangas <jani@kodegood.com>
++ *
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Library General Public
++ * License as published by the Free Software Foundation; either
++ * version 2 of the License, or (at your option) any later version.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Library General Public License for more details.
++ *
++ * You should have received a copy of the GNU Library General Public License
++ * along with this library; see the file COPYING.LIB.  If not, write to
++ * the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
++ * Boston, MA 02110-1301, USA.
++ */
++
++#include "config.h"
++#include "RefPtrOHOS.h"
++
++#if OS(OHOS)
++
++#include <native_buffer/native_buffer.h>
++
++namespace WTF {
++
++OH_NativeBuffer* DefaultRefDerefTraits<OH_NativeBuffer>::refIfNotNull(OH_NativeBuffer* ptr)
++{
++    if (ptr) [[likely]]
++        OH_NativeBuffer_Reference(ptr);
++    return ptr;
++}
++
++void DefaultRefDerefTraits<OH_NativeBuffer>::derefIfNotNull(OH_NativeBuffer* ptr)
++{
++    if (ptr) [[likely]]
++        OH_NativeBuffer_Unreference(ptr);
++}
++
++} // namespace WTF
++
++#endif // OS(OHOS)
+diff --git a/Source/WTF/wtf/ohos/RefPtrOHOS.h b/Source/WTF/wtf/ohos/RefPtrOHOS.h
+new file mode 100644
+index 000000000000..8002a7ad5117
+--- /dev/null
++++ b/Source/WTF/wtf/ohos/RefPtrOHOS.h
+@@ -0,0 +1,38 @@
++/*
++ * Copyright (C) 2025 Jani Hautakangas <jani@kodegood.com>
++ *
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Library General Public
++ * License as published by the Free Software Foundation; either
++ * version 2 of the License, or (at your option) any later version.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Library General Public License for more details.
++ *
++ * You should have received a copy of the GNU Library General Public License
++ * along with this library; see the file COPYING.LIB.  If not, write to
++ * the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
++ * Boston, MA 02110-1301, USA.
++ */
++
++#pragma once
++
++#if OS(OHOS)
++
++#include <wtf/RefPtr.h>
++
++typedef struct OH_NativeBuffer OH_NativeBuffer;
++
++namespace WTF {
++
++template<>
++struct DefaultRefDerefTraits<OH_NativeBuffer> {
++    static OH_NativeBuffer* refIfNotNull(OH_NativeBuffer*);
++    static void derefIfNotNull(OH_NativeBuffer*);
++};
++
++} // namespace WTF
++
++#endif // OS(OHOS)
+diff --git a/Source/WebCore/PlatformWPE.cmake b/Source/WebCore/PlatformWPE.cmake
+index 474ff664a7e6..e76de859d594 100644
+--- a/Source/WebCore/PlatformWPE.cmake
++++ b/Source/WebCore/PlatformWPE.cmake
+@@ -32,6 +32,7 @@ list(APPEND WebCore_PRIVATE_INCLUDE_DIRECTORIES
+     "${WEBCORE_DIR}/platform/graphics/epoxy"
+     "${WEBCORE_DIR}/platform/graphics/gbm"
+     "${WEBCORE_DIR}/platform/graphics/gstreamer"
++    "${WEBCORE_DIR}/platform/graphics/ohos"
+     "${WEBCORE_DIR}/platform/graphics/opengl"
+     "${WEBCORE_DIR}/platform/graphics/opentype"
+     "${WEBCORE_DIR}/platform/graphics/libwpe"
+@@ -55,12 +56,15 @@ list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
+     platform/glib/SelectionData.h
+     platform/glib/SystemSettings.h
+ 
++    platform/graphics/egl/PlatformDisplayDefault.h
+     platform/graphics/egl/PlatformDisplaySurfaceless.h
+ 
+     platform/graphics/gbm/GBMVersioning.h
+     platform/graphics/gbm/PlatformDisplayGBM.h
+ 
+     platform/graphics/libwpe/PlatformDisplayLibWPE.h
++
++    platform/graphics/ohos/BufferFormatOHOS.h
+ )
+ 
+ set(WebCore_USER_AGENT_SCRIPTS_DEPENDENCIES ${WEBCORE_DIR}/platform/wpe/RenderThemeWPE.cpp)
+diff --git a/Source/WebCore/SourcesWPE.txt b/Source/WebCore/SourcesWPE.txt
+index 9a760528751e..504bcd7f0702 100644
+--- a/Source/WebCore/SourcesWPE.txt
++++ b/Source/WebCore/SourcesWPE.txt
+@@ -74,6 +74,7 @@ platform/graphics/egl/GLDisplay.cpp @no-unify
+ platform/graphics/egl/GLFence.cpp @no-unify
+ platform/graphics/egl/GLFenceEGL.cpp @no-unify
+ platform/graphics/egl/GLFenceGL.cpp @no-unify
++platform/graphics/egl/PlatformDisplayDefault.cpp @no-unify
+ platform/graphics/egl/PlatformDisplaySurfaceless.cpp @no-unify
+ 
+ platform/graphics/gbm/DMABufBuffer.cpp
+@@ -85,6 +86,8 @@ platform/graphics/gbm/PlatformDisplayGBM.cpp @no-unify
+ 
+ platform/graphics/libwpe/PlatformDisplayLibWPE.cpp
+ 
++platform/graphics/ohos/BufferFormatOHOS.cpp @no-unify
++
+ platform/graphics/opentype/OpenTypeVerticalData.cpp
+ 
+ platform/libwpe/PlatformKeyboardEventLibWPE.cpp
+diff --git a/Source/WebCore/platform/graphics/PlatformDisplay.cpp b/Source/WebCore/platform/graphics/PlatformDisplay.cpp
+index dd7ab3e3965b..3d712adcaee5 100644
+--- a/Source/WebCore/platform/graphics/PlatformDisplay.cpp
++++ b/Source/WebCore/platform/graphics/PlatformDisplay.cpp
+@@ -174,18 +174,18 @@ bool PlatformDisplay::destroyEGLImage(EGLImage image) const
+     return m_eglDisplay->destroyImage(image);
+ }
+ 
+-#if USE(GBM)
++#if USE(GBM) || OS(OHOS)
+ const Vector<GLDisplay::DMABufFormat>& PlatformDisplay::dmabufFormats()
+ {
+     return m_eglDisplay->dmabufFormats();
+ }
++#endif // USE(GBM) || OS(OHOS)
+ 
+-#if USE(GSTREAMER)
++#if USE(GBM) && USE(GSTREAMER)
+ const Vector<GLDisplay::DMABufFormat>& PlatformDisplay::dmabufFormatsForVideo()
+ {
+     return m_eglDisplay->dmabufFormatsForVideo();
+ }
+-#endif
+-#endif // USE(GBM)
++#endif // USE(GBM) || USE(GSTREAMER)
+ 
+ } // namespace WebCore
+diff --git a/Source/WebCore/platform/graphics/PlatformDisplay.h b/Source/WebCore/platform/graphics/PlatformDisplay.h
+index af7470c20791..72ccd810584b 100644
+--- a/Source/WebCore/platform/graphics/PlatformDisplay.h
++++ b/Source/WebCore/platform/graphics/PlatformDisplay.h
+@@ -74,7 +74,7 @@ public:
+ #if USE(GBM)
+         GBM,
+ #endif
+-#if PLATFORM(GTK)
++#if PLATFORM(GTK) || PLATFORM(WPE)
+         Default,
+ #endif
+     };
+@@ -91,7 +91,7 @@ public:
+ 
+     EGLImage createEGLImage(EGLContext, EGLenum target, EGLClientBuffer, const Vector<EGLAttrib>&) const;
+     bool destroyEGLImage(EGLImage) const;
+-#if USE(GBM)
++#if USE(GBM) || OS(OHOS)
+     const Vector<GLDisplay::DMABufFormat>& dmabufFormats();
+ #if USE(GSTREAMER)
+     const Vector<GLDisplay::DMABufFormat>& dmabufFormatsForVideo();
+diff --git a/Source/WebCore/platform/graphics/angle/PlatformDisplayANGLE.cpp b/Source/WebCore/platform/graphics/angle/PlatformDisplayANGLE.cpp
+index 3b42090f0e4c..d5752b075766 100644
+--- a/Source/WebCore/platform/graphics/angle/PlatformDisplayANGLE.cpp
++++ b/Source/WebCore/platform/graphics/angle/PlatformDisplayANGLE.cpp
+@@ -44,7 +44,7 @@ EGLDisplay PlatformDisplay::angleEGLDisplay() const
+ 
+     Vector<EGLint> displayAttributes {
+         EGL_PLATFORM_ANGLE_TYPE_ANGLE, EGL_PLATFORM_ANGLE_TYPE_OPENGLES_ANGLE,
+-#if !OS(ANDROID)
++#if !OS(ANDROID) && !OS(OHOS)
+         EGL_PLATFORM_ANGLE_DEVICE_TYPE_ANGLE, EGL_PLATFORM_ANGLE_DEVICE_TYPE_EGL_ANGLE,
+         EGL_PLATFORM_ANGLE_NATIVE_PLATFORM_TYPE_ANGLE, m_anglePlatform.value(),
+ #endif
+diff --git a/Source/WebCore/platform/graphics/egl/GLDisplay.cpp b/Source/WebCore/platform/graphics/egl/GLDisplay.cpp
+index 576886deeea2..3635193daa72 100644
+--- a/Source/WebCore/platform/graphics/egl/GLDisplay.cpp
++++ b/Source/WebCore/platform/graphics/egl/GLDisplay.cpp
+@@ -20,10 +20,12 @@
+ #include "config.h"
+ #include "GLDisplay.h"
+ 
++#include "FourCC.h"
+ #include "GLContext.h"
+ #include <wtf/Locker.h>
+ #include <wtf/MainThread.h>
+ #include <wtf/text/StringView.h>
++#include "Logging.h"
+ 
+ #if USE(LIBEPOXY)
+ #include <epoxy/egl.h>
+@@ -32,7 +34,12 @@
+ #include <EGL/eglext.h>
+ #endif
+ 
+-#if USE(GBM)
++#if OS(OHOS)
++#include "BufferFormatOHOS.h"
++#include <native_buffer/native_buffer.h>
++#include <drm/drm_fourcc.h>
++#include <wtf/NeverDestroyed.h>
++#elif USE(GBM)
+ #include <drm_fourcc.h>
+ #endif
+ 
+@@ -227,4 +234,49 @@ const Vector<GLDisplay::DMABufFormat>& GLDisplay::dmabufFormatsForVideo()
+ #endif
+ #endif // USE(GBM)
+ 
++#if OS(OHOS)
++const Vector<GLDisplay::DMABufFormat>& GLDisplay::dmabufFormats()
++{
++    static LazyNeverDestroyed<Vector<GLDisplay::DMABufFormat>> formats;
++    static std::once_flag flag;
++    std::call_once(flag, []() {
++        formats.construct();
++
++        static constexpr FourCC drmFormats[] = {
++            DRM_FORMAT_RGBA8888,
++            DRM_FORMAT_RGBX8888,
++            DRM_FORMAT_RGB565,
++            DRM_FORMAT_RGBA1010102,
++            DRM_FORMAT_RGB888,
++        };
++
++        Vector<GLDisplay::DMABufFormat> result;
++        OH_NativeBuffer_Config bufferConfig { };
++        bufferConfig.usage = NATIVEBUFFER_USAGE_HW_RENDER;
++
++        for (const auto& drmFormat : drmFormats) {
++            const auto onbFormat = toOHNativeBufferFormat(drmFormat);
++            if (!onbFormat) {
++                RELEASE_LOG_DEBUG(IOSurface, "ONB: Cannot map DRM format '%s', skipped", drmFormat.string().data());
++                continue;
++            }
++
++            bufferConfig.format = onbFormat.value();
++            if (true /* TODO OH_NativeBuffer_IsSupported??? */) {
++                RELEASE_LOG_DEBUG(IOSurface, "ONB: Adding supported DRM format '%s'", drmFormat.string().data());
++                GLDisplay::DMABufFormat format;
++                format.fourcc = drmFormat.value;
++                formats->append(format);
++            } else
++                RELEASE_LOG_DEBUG(IOSurface, "ONB: Skipping unsupported DRM format '%s'", drmFormat.string().data());
++        }
++
++        RELEASE_LOG_DEBUG(IOSurface, "ONB: There are %zu supported formats", result.size());
++        return result;
++    });
++
++    return formats.get();
++}
++#endif // OS(OHOS)
++
+ } // namespace WebCore
+diff --git a/Source/WebCore/platform/graphics/egl/GLDisplay.h b/Source/WebCore/platform/graphics/egl/GLDisplay.h
+index b3840c6a3f94..28d909706f51 100644
+--- a/Source/WebCore/platform/graphics/egl/GLDisplay.h
++++ b/Source/WebCore/platform/graphics/egl/GLDisplay.h
+@@ -71,6 +71,11 @@ public:
+ #if USE(GSTREAMER)
+     const Vector<DMABufFormat>& dmabufFormatsForVideo();
+ #endif
++#elif OS(OHOS)
++    struct DMABufFormat {
++        uint32_t fourcc;
++    };
++    const Vector<DMABufFormat>& dmabufFormats();
+ #endif
+ 
+ private:
+diff --git a/Source/WebCore/platform/graphics/egl/PlatformDisplayDefault.cpp b/Source/WebCore/platform/graphics/egl/PlatformDisplayDefault.cpp
+index 52348bdabf28..28f322f49386 100644
+--- a/Source/WebCore/platform/graphics/egl/PlatformDisplayDefault.cpp
++++ b/Source/WebCore/platform/graphics/egl/PlatformDisplayDefault.cpp
+@@ -26,7 +26,7 @@
+ #include "config.h"
+ #include "PlatformDisplayDefault.h"
+ 
+-#if PLATFORM(GTK)
++#if PLATFORM(GTK) || PLATFORM(WPE)
+ 
+ #include "GLContext.h"
+ #include <epoxy/egl.h>
+@@ -59,4 +59,4 @@ PlatformDisplayDefault::~PlatformDisplayDefault()
+ 
+ } // namespace WebCore
+ 
+-#endif // PLATFORM(GTK)
++#endif // PLATFORM(GTK) || PLATFORM(WPE)
+diff --git a/Source/WebCore/platform/graphics/egl/PlatformDisplayDefault.h b/Source/WebCore/platform/graphics/egl/PlatformDisplayDefault.h
+index 0f14809d62f2..ffa653f28d87 100644
+--- a/Source/WebCore/platform/graphics/egl/PlatformDisplayDefault.h
++++ b/Source/WebCore/platform/graphics/egl/PlatformDisplayDefault.h
+@@ -25,7 +25,7 @@
+ 
+ #pragma once
+ 
+-#if PLATFORM(GTK)
++#if PLATFORM(GTK) || PLATFORM(WPE)
+ 
+ #include "PlatformDisplay.h"
+ 
+@@ -44,4 +44,4 @@ private:
+ 
+ } // namespace WebCore
+ 
+-#endif // PLATFORM(GTK)
++#endif // PLATFORM(GTK) || PLATFORM(WPE)
+diff --git a/Source/WebCore/platform/graphics/ohos/BufferFormatOHOS.cpp b/Source/WebCore/platform/graphics/ohos/BufferFormatOHOS.cpp
+new file mode 100644
+index 000000000000..618ac3158706
+--- /dev/null
++++ b/Source/WebCore/platform/graphics/ohos/BufferFormatOHOS.cpp
+@@ -0,0 +1,50 @@
++/*
++ * Copyright (C) 2025 Jani Hautakangas <jani@kodegood.com>
++ *
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Library General Public
++ * License as published by the Free Software Foundation; either
++ * version 2 of the License, or (at your option) any later version.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Library General Public License for more details.
++ *
++ * You should have received a copy of the GNU Library General Public License
++ * along with this library; see the file COPYING.LIB.  If not, write to
++ * the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
++ * Boston, MA 02110-1301, USA.
++ */
++
++#include "config.h"
++#include "BufferFormatOHOS.h"
++
++#if OS(OHOS)
++
++#include <native_buffer/native_buffer.h>
++#include <drm/drm_fourcc.h>
++
++namespace WebCore {
++
++std::optional<uint32_t> toOHNativeBufferFormat(const FourCC fourcc)
++{
++    switch (fourcc.value) {
++    case DRM_FORMAT_RGBX8888:
++        return NATIVEBUFFER_PIXEL_FMT_RGBX_8888;
++    case DRM_FORMAT_RGBA8888:
++        return NATIVEBUFFER_PIXEL_FMT_RGBA_8888;
++    case DRM_FORMAT_RGB565:
++        return NATIVEBUFFER_PIXEL_FMT_RGB_565;
++    case DRM_FORMAT_RGBA1010102:
++        return NATIVEBUFFER_PIXEL_FMT_RGBA_1010102;
++    case DRM_FORMAT_RGB888:
++        return NATIVEBUFFER_PIXEL_FMT_RGB_888;
++    default:
++        return std::nullopt;
++    }
++}
++
++} // namespace WebCore
++
++#endif // OS(OHOS)
+diff --git a/Source/WebCore/platform/graphics/ohos/BufferFormatOHOS.h b/Source/WebCore/platform/graphics/ohos/BufferFormatOHOS.h
+new file mode 100644
+index 000000000000..c4f4dd44eb70
+--- /dev/null
++++ b/Source/WebCore/platform/graphics/ohos/BufferFormatOHOS.h
+@@ -0,0 +1,33 @@
++/*
++ * Copyright (C) 2025 Jani Hautakangas <jani@kodegood.com>
++ *
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Library General Public
++ * License as published by the Free Software Foundation; either
++ * version 2 of the License, or (at your option) any later version.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Library General Public License for more details.
++ *
++ * You should have received a copy of the GNU Library General Public License
++ * along with this library; see the file COPYING.LIB.  If not, write to
++ * the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
++ * Boston, MA 02110-1301, USA.
++ */
++
++#pragma once
++
++#if OS(OHOS)
++
++#include "FourCC.h"
++#include <optional>
++
++namespace WebCore {
++
++std::optional<uint32_t> toOHNativeBufferFormat(const FourCC);
++
++} // namespace WebCore
++
++#endif // OS(OHOS)
+diff --git a/Source/WebKit/Platform/IPC/ArgumentCoders.h b/Source/WebKit/Platform/IPC/ArgumentCoders.h
+index f8ba7b8d216e..41c16d18ba7f 100644
+--- a/Source/WebKit/Platform/IPC/ArgumentCoders.h
++++ b/Source/WebKit/Platform/IPC/ArgumentCoders.h
+@@ -44,6 +44,8 @@
+ 
+ #if OS(ANDROID)
+ #include "ArgumentCodersAndroid.h"
++#elif OS(OHOS)
++#include "ArgumentCodersOHOS.h"
+ #endif
+ #if USE(GLIB)
+ #include "ArgumentCodersGlib.h"
+diff --git a/Source/WebKit/Platform/IPC/Attachment.h b/Source/WebKit/Platform/IPC/Attachment.h
+index 606d48b9e5c4..0eb00550c9f1 100644
+--- a/Source/WebKit/Platform/IPC/Attachment.h
++++ b/Source/WebKit/Platform/IPC/Attachment.h
+@@ -35,6 +35,11 @@
+ #include <wtf/android/RefPtrAndroid.h>
+ #endif
+ 
++#if OS(OHOS)
++#include <wtf/Variant.h>
++#include <wtf/ohos/RefPtrOHOS.h>
++#endif
++
+ #if USE(UNIX_DOMAIN_SOCKETS)
+ #include <wtf/unix/UnixFileDescriptor.h>
+ #endif
+@@ -49,6 +54,8 @@ using Attachment = MachSendRight;
+ struct Attachment { }; // Windows does not need attachments at the moment.
+ #elif OS(ANDROID)
+ using Attachment = Variant<UnixFileDescriptor, RefPtr<AHardwareBuffer>>;
++#elif OS(OHOS)
++using Attachment = Variant<UnixFileDescriptor, RefPtr<OH_NativeBuffer>>;
+ #elif USE(UNIX_DOMAIN_SOCKETS)
+ using Attachment = UnixFileDescriptor;
+ #else
+diff --git a/Source/WebKit/Platform/IPC/Connection.h b/Source/WebKit/Platform/IPC/Connection.h
+index 9eefbda6f5ff..a7bdae7b3f47 100644
+--- a/Source/WebKit/Platform/IPC/Connection.h
++++ b/Source/WebKit/Platform/IPC/Connection.h
+@@ -80,6 +80,10 @@
+ #endif
+ #endif // OS(DARWIN)
+ 
++#if OS(OHOS)
++#include <wtf/ohos/RefPtrOHOS.h>
++#endif
++
+ #if USE(GLIB)
+ #include <wtf/glib/GSocketMonitor.h>
+ #endif
+@@ -97,6 +101,12 @@
+ #include "MessageObserver.h"
+ #endif
+ 
++#if OS(OHOS)
++typedef struct OH_NativeBuffer OH_NativeBuffer;
++using PFOH_NativeBuffer_recvHandleFromUnixSocket = int (*)(int socketFd, OH_NativeBuffer** outBuffer);
++using PFOH_NativeBuffer_sendHandleToUnixSocket = int (*)(const OH_NativeBuffer* buffer, int socketFd);
++#endif
++
+ namespace IPC {
+ 
+ enum class SendOption : uint8_t {
+@@ -733,6 +743,16 @@ private:
+     size_t m_pendingIncomingHardwareBufferCount { 0 };
+     Vector<RefPtr<AHardwareBuffer>, 2> m_incomingHardwareBuffers;
+     Vector<RefPtr<AHardwareBuffer>, 2> m_outgoingHardwareBuffers;
++#elif OS(OHOS)
++    PFOH_NativeBuffer_recvHandleFromUnixSocket m_OH_NativeBuffer_recvHandleFromUnixSocket { nullptr };
++    PFOH_NativeBuffer_sendHandleToUnixSocket m_OH_NativeBuffer_sendHandleToUnixSocket { nullptr };
++
++    bool sendOutgoingNativeBuffers();
++    bool receiveIncomingNativeBuffers();
++
++    size_t m_pendingIncomingNativeBufferCount { 0 };
++    Vector<RefPtr<OH_NativeBuffer>, 2> m_incomingNativeBuffers;
++    Vector<RefPtr<OH_NativeBuffer>, 2> m_outgoingNativeBuffers;
+ #endif
+ #if USE(GLIB)
+     GRefPtr<GSocket> m_socket;
+diff --git a/Source/WebKit/Platform/IPC/ohos/ArgumentCodersOHOS.cpp b/Source/WebKit/Platform/IPC/ohos/ArgumentCodersOHOS.cpp
+new file mode 100644
+index 000000000000..73945f3211f7
+--- /dev/null
++++ b/Source/WebKit/Platform/IPC/ohos/ArgumentCodersOHOS.cpp
+@@ -0,0 +1,62 @@
++/*
++ * Copyright (C) 2025 Jani Hautakangas <jani@kodegood.com>
++ *
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Library General Public
++ * License as published by the Free Software Foundation; either
++ * version 2 of the License, or (at your option) any later version.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Library General Public License for more details.
++ *
++ * You should have received a copy of the GNU Library General Public License
++ * along with this library; see the file COPYING.LIB.  If not, write to
++ * the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
++ * Boston, MA 02110-1301, USA.
++ */
++
++#include "config.h"
++#include "ArgumentCodersOHOS.h"
++
++#if OS(OHOS)
++
++#include "ArgumentCodersUnix.h"
++#include "Decoder.h"
++#include "Encoder.h"
++#include <wtf/unix/UnixFileDescriptor.h>
++
++namespace IPC {
++
++std::optional<UnixFileDescriptor> ArgumentCoder<UnixFileDescriptor>::decode(Decoder& decoder)
++{
++    if (auto attachment = decoder.takeLastAttachment()) {
++        if (holdsAlternative<UnixFileDescriptor>(attachment.value()))
++            return { WTFMove(get<UnixFileDescriptor>(attachment.value())) };
++    }
++    return std::nullopt;
++}
++
++void ArgumentCoder<RefPtr<OH_NativeBuffer>>::encode(Encoder& encoder, const RefPtr<OH_NativeBuffer>& buffer)
++{
++    encoder.addAttachment(RefPtr { buffer });
++}
++
++void ArgumentCoder<RefPtr<OH_NativeBuffer>>::encode(Encoder& encoder, RefPtr<OH_NativeBuffer>&& buffer)
++{
++    encoder.addAttachment(WTFMove(buffer));
++}
++
++std::optional<RefPtr<OH_NativeBuffer>> ArgumentCoder<RefPtr<OH_NativeBuffer>>::decode(Decoder& decoder)
++{
++    if (auto attachment = decoder.takeLastAttachment()) {
++        if (holdsAlternative<RefPtr<OH_NativeBuffer>>(attachment.value()))
++            return { WTFMove(get<RefPtr<OH_NativeBuffer>>(attachment.value())) };
++    }
++    return std::nullopt;
++}
++
++}
++
++#endif // OS(OHOS)
+diff --git a/Source/WebKit/Platform/IPC/ohos/ArgumentCodersOHOS.h b/Source/WebKit/Platform/IPC/ohos/ArgumentCodersOHOS.h
+new file mode 100644
+index 000000000000..2e87f6b73175
+--- /dev/null
++++ b/Source/WebKit/Platform/IPC/ohos/ArgumentCodersOHOS.h
+@@ -0,0 +1,37 @@
++/*
++ * Copyright (C) 2025 Jani Hautakangas <jani@kodegood.com>
++ *
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Library General Public
++ * License as published by the Free Software Foundation; either
++ * version 2 of the License, or (at your option) any later version.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Library General Public License for more details.
++ *
++ * You should have received a copy of the GNU Library General Public License
++ * along with this library; see the file COPYING.LIB.  If not, write to
++ * the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
++ * Boston, MA 02110-1301, USA.
++ */
++
++#pragma once
++
++#if OS(OHOS)
++
++#include <wtf/ArgumentCoder.h>
++#include <wtf/ohos/RefPtrOHOS.h>
++
++namespace IPC {
++
++template<> struct ArgumentCoder<RefPtr<OH_NativeBuffer>> {
++    static void encode(Encoder&, const RefPtr<OH_NativeBuffer>&);
++    static void encode(Encoder&, RefPtr<OH_NativeBuffer>&&);
++    static std::optional<RefPtr<OH_NativeBuffer>> decode(Decoder&);
++};
++
++}
++
++#endif // OS(OHOS)
+diff --git a/Source/WebKit/Platform/IPC/unix/ArgumentCodersUnix.cpp b/Source/WebKit/Platform/IPC/unix/ArgumentCodersUnix.cpp
+index 960eb5abcb5a..2bd2d5c602f4 100644
+--- a/Source/WebKit/Platform/IPC/unix/ArgumentCodersUnix.cpp
++++ b/Source/WebKit/Platform/IPC/unix/ArgumentCodersUnix.cpp
+@@ -42,11 +42,11 @@ void ArgumentCoder<UnixFileDescriptor>::encode(Encoder& encoder, UnixFileDescrip
+     encoder.addAttachment(WTFMove(fd));
+ }
+ 
+-#if !OS(ANDROID)
++#if !OS(ANDROID) && !OS(OHOS)
+ std::optional<UnixFileDescriptor> ArgumentCoder<UnixFileDescriptor>::decode(Decoder& decoder)
+ {
+     return decoder.takeLastAttachment();
+ }
+-#endif // OS(ANDROID)
++#endif // OS(ANDROID) && OS(OHOS)
+ 
+ }
+diff --git a/Source/WebKit/Platform/IPC/unix/ConnectionUnix.cpp b/Source/WebKit/Platform/IPC/unix/ConnectionUnix.cpp
+index 515585640ca3..1e62d691209c 100644
+--- a/Source/WebKit/Platform/IPC/unix/ConnectionUnix.cpp
++++ b/Source/WebKit/Platform/IPC/unix/ConnectionUnix.cpp
+@@ -57,6 +57,11 @@
+ #define MSG_NOSIGNAL 0
+ #endif
+ 
++#if OS(OHOS)
++#include <dlfcn.h>
++#include <native_buffer/native_buffer.h>
++#endif
++
+ // Although it's available on Darwin, SOCK_SEQPACKET seems to work differently
+ // than in traditional Unix so fallback to STREAM on that platform.
+ #if defined(SOCK_SEQPACKET) && !OS(DARWIN)
+@@ -98,22 +103,26 @@ public:
+     void setNull() { m_isNull = true; }
+     bool isNull() const { return m_isNull; }
+ 
+-#if OS(ANDROID)
++#if OS(ANDROID) || OS(OHOS)
+     enum class Type : uint8_t {
+         Unset = 0,
+         FileDescriptor,
+-        HardwareBuffer,
++#if OS(ANDROID)
++        HardwareBuffer
++#elif OS(OHOS)
++        NativeBuffer
++#endif
+     };
+ 
+     Type type() const { return m_type; }
+     void setType(Type type) { m_type = type; }
+-#endif // OS(ANDROID)
++#endif // OS(ANDROID) || OS(OHOS)
+ 
+ private:
+     // The AttachmentInfo will be copied using memcpy, so all members must be trivially copyable.
+     bool m_isNull;
+ 
+-#if OS(ANDROID)
++#if OS(ANDROID) || OS(OHOS)
+     Type m_type;
+ #endif
+ };
+@@ -144,6 +153,27 @@ void Connection::platformInitialize(Identifier&& identifier)
+ #endif
+     m_readBuffer.reserveInitialCapacity(messageMaxSize);
+     m_fileDescriptors.reserveInitialCapacity(attachmentMaxAmount);
++
++#if OS(OHOS)
++    static PFOH_NativeBuffer_recvHandleFromUnixSocket pOH_NativeBuffer_recvHandleFromUnixSocket = nullptr;
++    static PFOH_NativeBuffer_sendHandleToUnixSocket pOH_NativeBuffer_sendHandleToUnixSocket = nullptr;
++    static bool triedToLoadOHNativeBufferSymbols = false;
++    if (!triedToLoadOHNativeBufferSymbols) {
++        triedToLoadOHNativeBufferSymbols = true;
++        void* handle = dlopen("/system/lib64/ndk/libnative_buffer_socket.z.so", RTLD_NOW);
++        if (handle) {
++            pOH_NativeBuffer_recvHandleFromUnixSocket = reinterpret_cast<PFOH_NativeBuffer_recvHandleFromUnixSocket>(dlsym(handle, "OH_NativeBuffer_recvHandleFromUnixSocket"));
++            pOH_NativeBuffer_sendHandleToUnixSocket = reinterpret_cast<PFOH_NativeBuffer_sendHandleToUnixSocket>(dlsym(handle, "OH_NativeBuffer_sendHandleToUnixSocket"));
++            if (!pOH_NativeBuffer_recvHandleFromUnixSocket || !pOH_NativeBuffer_sendHandleToUnixSocket) {
++                dlclose(handle);
++                pOH_NativeBuffer_recvHandleFromUnixSocket = nullptr;
++                pOH_NativeBuffer_sendHandleToUnixSocket = nullptr;
++            }
++        }
++    }
++    m_OH_NativeBuffer_recvHandleFromUnixSocket = pOH_NativeBuffer_recvHandleFromUnixSocket;
++    m_OH_NativeBuffer_sendHandleToUnixSocket = pOH_NativeBuffer_sendHandleToUnixSocket;
++#endif
+ }
+ 
+ void Connection::platformInvalidate()
+@@ -200,28 +230,37 @@ bool Connection::processMessage()
+ 
+ #if OS(ANDROID)
+     [[maybe_unused]] size_t attachmentHardwareBufferCount = 0;
++#elif OS(OHOS)
++    [[maybe_unused]] size_t attachmentNativeBufferCount = 0;
+ #endif
+ 
+     if (attachmentCount) {
+         memcpySpan(asMutableByteSpan(attachmentInfo.mutableSpan()), consumeSpan(messageData, sizeof(AttachmentInfo) * attachmentCount));
+         for (size_t i = 0; i < attachmentCount; ++i) {
+-#if OS(ANDROID)
++#if OS(ANDROID) || OS(OHOS)
+             switch (attachmentInfo[i].type()) {
+             case AttachmentInfo::Type::FileDescriptor:
+                 if (!attachmentInfo[i].isNull())
+                     attachmentFileDescriptorCount++;
+                 break;
++#if OS(ANDROID)
+             case AttachmentInfo::Type::HardwareBuffer:
+                 if (!attachmentInfo[i].isNull())
+                     attachmentHardwareBufferCount++;
+                 break;
++#elif OS(OHOS)
++            case AttachmentInfo::Type::NativeBuffer:
++                if (!attachmentInfo[i].isNull())
++                    attachmentNativeBufferCount++;
++                break;
++#endif
+             case AttachmentInfo::Type::Unset:
+                 RELEASE_ASSERT_NOT_REACHED();
+             }
+ #else
+             if (!attachmentInfo[i].isNull())
+                 attachmentFileDescriptorCount++;
+-#endif // OS(ANDROID)
++#endif // OS(ANDROID) || OS(OHOS)
+         }
+ 
+         if (messageInfo.isBodyOutOfLine())
+@@ -231,8 +270,14 @@ bool Connection::processMessage()
+     Vector<Attachment> attachments(attachmentCount);
+     RefPtr<WebCore::SharedMemory> oolMessageBody;
+ 
++
+ #if OS(ANDROID)
+     RELEASE_ASSERT(attachmentHardwareBufferCount == messageInfo.hardwareBufferCount());
++#elif OS(OHOS)
++    RELEASE_ASSERT(attachmentNativeBufferCount == messageInfo.nativeBufferCount());
++#endif
++
++#if OS(ANDROID) || OS(OHOS)
+     size_t fdIndex = 0;
+     for (size_t i = 0; i < attachmentCount; ++i) {
+         switch (attachmentInfo[i].type()) {
+@@ -242,6 +287,7 @@ bool Connection::processMessage()
+                 UnixFileDescriptor::Adopt
+             };
+             break;
++#if OS(ANDROID)
+         case AttachmentInfo::Type::HardwareBuffer:
+             if (attachmentInfo[i].isNull())
+                 attachments[attachmentCount - i - 1] = nullptr;
+@@ -251,6 +297,17 @@ bool Connection::processMessage()
+                 m_incomingHardwareBuffers.removeAt(0);
+             }
+             break;
++#elif OS(OHOS)
++        case AttachmentInfo::Type::NativeBuffer:
++            if (attachmentInfo[i].isNull())
++                attachments[attachmentCount - i - 1] = nullptr;
++            else {
++                RELEASE_ASSERT(!m_incomingNativeBuffers.isEmpty());
++                attachments[attachmentCount - i - 1] = WTFMove(m_incomingNativeBuffers.first());
++                m_incomingNativeBuffers.removeAt(0);
++            }
++            break;
++#endif
+         case AttachmentInfo::Type::Unset:
+             RELEASE_ASSERT_NOT_REACHED();
+         }
+@@ -261,7 +318,7 @@ bool Connection::processMessage()
+         int fd = !attachmentInfo[i].isNull() ? m_fileDescriptors[fdIndex++] : -1;
+         attachments[attachmentCount - i - 1] = UnixFileDescriptor { fd, UnixFileDescriptor::Adopt };
+     }
+-#endif // OS(ANDROID)
++#endif // OS(ANDROID) || OS(OHOS)
+ 
+     if (messageInfo.isBodyOutOfLine()) {
+         ASSERT(messageInfo.bodySize());
+@@ -391,6 +448,12 @@ void Connection::readyReadHandler()
+             RELEASE_ASSERT(processMessage());
+         return;
+     }
++#elif OS(OHOS)
++    if (m_pendingIncomingNativeBufferCount) {
++        if (receiveIncomingNativeBuffers())
++            RELEASE_ASSERT(processMessage());
++        return;
++    }
+ #endif
+ 
+     while (true) {
+@@ -428,7 +491,17 @@ void Connection::readyReadHandler()
+             if (!receiveIncomingHardwareBuffers())
+                 return;
+         }
+-#endif // OS(ANDROID)
++#elif OS(OHOS)
++        RELEASE_ASSERT(m_readBuffer.size() >= sizeof(MessageInfo));
++        const auto& messageInfo = reinterpretCastSpanStartTo<MessageInfo>(m_readBuffer.span());
++        if (auto nativeBufferCount = messageInfo.nativeBufferCount()) {
++            RELEASE_ASSERT(m_incomingNativeBuffers.isEmpty());
++            RELEASE_ASSERT(!m_pendingIncomingNativeBufferCount);
++            m_pendingIncomingNativeBufferCount = nativeBufferCount;
++            if (!receiveIncomingNativeBuffers())
++                return;
++        }
++#endif
+ 
+         // Process messages from data received.
+         while (true) {
+@@ -498,6 +571,8 @@ bool Connection::platformCanSendOutgoingMessages() const
+ {
+ #if OS(ANDROID)
+     return !m_pendingOutputMessage && m_outgoingHardwareBuffers.isEmpty();
++#elif OS(OHOS)
++    return !m_pendingOutputMessage && m_outgoingNativeBuffers.isEmpty();
+ #else
+     return !m_pendingOutputMessage;
+ #endif
+@@ -540,6 +615,9 @@ bool Connection::sendOutputMessage(UnixMessage& outputMessage)
+ #if OS(ANDROID)
+     RELEASE_ASSERT(m_outgoingHardwareBuffers.isEmpty());
+     Vector<RefPtr<AHardwareBuffer>, 2> hardwareBuffers;
++#elif OS(OHOS)
++    RELEASE_ASSERT(m_outgoingNativeBuffers.isEmpty());
++    Vector<RefPtr<OH_NativeBuffer>, 2> nativeBuffers;
+ #endif
+ 
+     auto& messageInfo = outputMessage.messageInfo();
+@@ -562,7 +640,7 @@ bool Connection::sendOutputMessage(UnixMessage& outputMessage)
+     if (!attachments.isEmpty()) {
+         int* fdPtr = 0;
+ 
+-#if OS(ANDROID)
++#if OS(ANDROID) || OS(OHOS)
+         size_t attachmentFDBufferLength = 0;
+         for (const auto& attachment : attachments) {
+             switchOn(attachment,
+@@ -570,10 +648,17 @@ bool Connection::sendOutputMessage(UnixMessage& outputMessage)
+                     if (!!fd)
+                         ++attachmentFDBufferLength;
+                 },
++#if OS(ANDROID)
+                 [&hardwareBuffers](const RefPtr<AHardwareBuffer>& buffer) {
+                     if (buffer)
+                         hardwareBuffers.append(buffer);
+                 }
++#elif OS(OHOS)
++                [&nativeBuffers](const RefPtr<OH_NativeBuffer>& buffer) {
++                    if (buffer)
++                        nativeBuffers.append(buffer);
++                }
++#endif
+             );
+         }
+ #else
+@@ -581,7 +666,7 @@ bool Connection::sendOutputMessage(UnixMessage& outputMessage)
+             [](const Attachment& attachment) {
+                 return !!attachment;
+             });
+-#endif // OS(ANDROID)
++#endif // OS(ANDROID) || OS(OHOS)
+ 
+         if (attachmentFDBufferLength) {
+             attachmentFDBuffer = MallocSpan<char>::zeroedMalloc(CMSG_SPACE(sizeof(int) * attachmentFDBufferLength));
+@@ -600,13 +685,19 @@ bool Connection::sendOutputMessage(UnixMessage& outputMessage)
+         attachmentInfo.resize(attachments.size());
+         int fdIndex = 0;
+         for (size_t i = 0; i < attachments.size(); ++i) {
+-#if OS(ANDROID)
++#if OS(ANDROID) || OS(OHOS)
+             RELEASE_ASSERT(attachmentInfo[i].type() == AttachmentInfo::Type::Unset);
+-
++#if OS(ANDROID)
+             if (holdsAlternative<RefPtr<AHardwareBuffer>>(attachments[i])) {
+                 attachmentInfo[i].setType(AttachmentInfo::Type::HardwareBuffer);
+                 if (!get<RefPtr<AHardwareBuffer>>(attachments[i]))
+                     attachmentInfo[i].setNull();
++#elif OS(OHOS)
++            if (holdsAlternative<RefPtr<OH_NativeBuffer>>(attachments[i])) {
++                attachmentInfo[i].setType(AttachmentInfo::Type::NativeBuffer);
++                if (!get<RefPtr<OH_NativeBuffer>>(attachments[i]))
++                    attachmentInfo[i].setNull();
++#endif
+             } else if (holdsAlternative<UnixFileDescriptor>(attachments[i])) {
+                 attachmentInfo[i].setType(AttachmentInfo::Type::FileDescriptor);
+                 if (!!get<UnixFileDescriptor>(attachments[i]))
+@@ -623,7 +714,7 @@ bool Connection::sendOutputMessage(UnixMessage& outputMessage)
+                 fdPtr[fdIndex++] = attachments[i].value();
+             } else
+                 attachmentInfo[i].setNull();
+-#endif // OS(ANDROID)
++#endif // OS(ANDROID) || OS(OHOS)
+         }
+ 
+         iov[iovLength].iov_base = attachmentInfo.mutableSpan().data();
+@@ -692,6 +783,10 @@ bool Connection::sendOutputMessage(UnixMessage& outputMessage)
+     RELEASE_ASSERT(m_outgoingHardwareBuffers.isEmpty());
+     m_outgoingHardwareBuffers = WTFMove(hardwareBuffers);
+     return sendOutgoingHardwareBuffers();
++#elif OS(OHOS)
++    RELEASE_ASSERT(m_outgoingNativeBuffers.isEmpty());
++    m_outgoingNativeBuffers = WTFMove(nativeBuffers);
++    return sendOutgoingNativeBuffers();
+ #else
+     return true;
+ #endif
+@@ -772,7 +867,82 @@ bool Connection::receiveIncomingHardwareBuffers()
+ 
+     return true;
+ }
+-#endif // OS(ANDROID)
++#elif OS(OHOS)
++bool Connection::sendOutgoingNativeBuffers()
++{
++    while (!m_outgoingNativeBuffers.isEmpty()) {
++        auto& buffer = m_outgoingNativeBuffers.first();
++        RELEASE_ASSERT(buffer);
++
++        // There is no need to check for EINTR, it is handled internally.
++        int result = m_OH_NativeBuffer_sendHandleToUnixSocket(buffer.get(), socketDescriptor());
++        if (!result) {
++            m_outgoingNativeBuffers.removeAt(0);
++            continue;
++        }
++
++        if (result == -EAGAIN || result == -EWOULDBLOCK) {
++            m_writeSocketMonitor.start(m_socket.get(), G_IO_OUT, m_connectionQueue->runLoop(), [this, protectedThis = Ref { *this }] (GIOCondition condition) -> gboolean {
++                if (condition & G_IO_OUT) {
++                    RELEASE_ASSERT(!m_outgoingNativeBuffers.isEmpty());
++                    // We can't stop the monitor from this lambda, because stop destroys the lambda.
++                    m_connectionQueue->dispatch([this, protectedThis = Ref { *this }] {
++                        m_writeSocketMonitor.stop();
++                        if (m_isConnected) {
++                            if (sendOutgoingNativeBuffers())
++                                sendOutgoingMessages();
++                        }
++                    });
++                }
++                return G_SOURCE_REMOVE;
++            });
++            return false;
++        }
++
++        if (result == -EPIPE || result == -ECONNRESET) {
++            connectionDidClose();
++            return false;
++        }
++
++        if (m_isConnected) {
++            LOG_ERROR("Error sending NativeBuffer on socket %d in process %d: %s", socketDescriptor(), getpid(), safeStrerror(-result).data());
++            connectionDidClose();
++        }
++        return false;
++    }
++
++    RELEASE_ASSERT(m_outgoingNativeBuffers.isEmpty());
++    return true;
++}
++
++bool Connection::receiveIncomingNativeBuffers()
++{
++    while (m_pendingIncomingNativeBufferCount) {
++        OH_NativeBuffer* buffer { nullptr };
++        int result = m_OH_NativeBuffer_recvHandleFromUnixSocket(socketDescriptor(), &buffer);
++        if (!result) {
++            m_pendingIncomingNativeBufferCount--;
++            auto nativeBuffer = adoptRef(buffer);
++            m_incomingNativeBuffers.append(WTFMove(nativeBuffer));
++            continue;
++        }
++
++        if (result == -EAGAIN || result == -EWOULDBLOCK)
++            return false;
++
++        if (result == -ECONNRESET)
++            connectionDidClose();
++
++        if (m_isConnected) {
++            LOG_ERROR("Error receiving NativeBuffer on socket %d in process %d: %s", socketDescriptor(), getpid(), safeStrerror(-result).data());
++            connectionDidClose();
++        }
++        return false;
++    }
++
++    return true;
++}
++#endif // OS(OHOS)
+ 
+ SocketPair createPlatformConnection(unsigned options)
+ {
+diff --git a/Source/WebKit/Platform/IPC/unix/UnixMessage.h b/Source/WebKit/Platform/IPC/unix/UnixMessage.h
+index 33ea1e0f209d..3f8419f40fbb 100644
+--- a/Source/WebKit/Platform/IPC/unix/UnixMessage.h
++++ b/Source/WebKit/Platform/IPC/unix/UnixMessage.h
+@@ -54,6 +54,16 @@ public:
+     }
+ 
+     size_t hardwareBufferCount() const { return m_hardwareBufferCount; }
++#elif OS(OHOS)
++    MessageInfo(size_t bodySize, size_t initialAttachmentCount, size_t nativeBufferCount)
++        : MessageInfo()
++    {
++        m_bodySize = bodySize;
++        m_attachmentCount = initialAttachmentCount;
++        m_nativeBufferCount = nativeBufferCount;
++    }
++
++    size_t nativeBufferCount() const { return m_nativeBufferCount; }
+ #else
+     MessageInfo(size_t bodySize, size_t initialAttachmentCount)
+         : MessageInfo()
+@@ -89,8 +99,15 @@ private:
+     size_t m_attachmentCount;
+ #if OS(ANDROID)
+     size_t m_hardwareBufferCount;
++#elif OS(OHOS)
++    size_t m_nativeBufferCount;
+ #endif
+     bool m_isBodyOutOfLine;
++
++    inline void clear()
++    {
++        memset(static_cast<void*>(this), 0, sizeof(MessageInfo));
++    }
+ };
+ 
+ class UnixMessage {
+@@ -102,6 +119,10 @@ public:
+         , m_messageInfo(encoder.span().size(), m_attachments.size(), std::count_if(m_attachments.begin(), m_attachments.end(), [](const Attachment& attachment) {
+             return holdsAlternative<RefPtr<AHardwareBuffer>>(attachment) && get<RefPtr<AHardwareBuffer>>(attachment);
+         }))
++#elif OS(OHOS)
++        , m_messageInfo(encoder.span().size(), m_attachments.size(), std::count_if(m_attachments.begin(), m_attachments.end(), [](const Attachment& attachment) {
++            return holdsAlternative<RefPtr<OH_NativeBuffer>>(attachment) && get<RefPtr<OH_NativeBuffer>>(attachment);
++        }))
+ #else
+         , m_messageInfo(encoder.span().size(), m_attachments.size())
+ #endif
+diff --git a/Source/WebKit/PlatformWPE.cmake b/Source/WebKit/PlatformWPE.cmake
+index b4eda0bf2d7a..864bc35b1c4f 100644
+--- a/Source/WebKit/PlatformWPE.cmake
++++ b/Source/WebKit/PlatformWPE.cmake
+@@ -388,6 +388,7 @@ list(APPEND WebKit_PRIVATE_INCLUDE_DIRECTORIES
+     "${WEBKIT_DIR}/NetworkProcess/soup"
+     "${WEBKIT_DIR}/Platform/IPC/android"
+     "${WEBKIT_DIR}/Platform/IPC/glib"
++    "${WEBKIT_DIR}/Platform/IPC/ohos"
+     "${WEBKIT_DIR}/Platform/IPC/unix"
+     "${WEBKIT_DIR}/Platform/classifier"
+     "${WEBKIT_DIR}/Platform/generic"
+diff --git a/Source/WebKit/Shared/WebPageCreationParameters.h b/Source/WebKit/Shared/WebPageCreationParameters.h
+index 0c0abe524157..a32fa3bff0a6 100644
+--- a/Source/WebKit/Shared/WebPageCreationParameters.h
++++ b/Source/WebKit/Shared/WebPageCreationParameters.h
+@@ -73,7 +73,7 @@
+ #include "WebExtensionControllerParameters.h"
+ #endif
+ 
+-#if (PLATFORM(GTK) || PLATFORM(WPE)) && USE(GBM)
++#if (PLATFORM(GTK) || PLATFORM(WPE)) && (USE(GBM) || OS(OHOS))
+ #include "RendererBufferFormat.h"
+ #endif
+ 
+@@ -336,7 +336,7 @@ struct WebPageCreationParameters {
+ #endif
+ 
+ #if PLATFORM(GTK) || PLATFORM(WPE)
+-#if USE(GBM)
++#if USE(GBM) || OS(OHOS)
+     Vector<RendererBufferFormat> preferredBufferFormats { };
+ #endif
+ #endif
+diff --git a/Source/WebKit/Shared/WebPageCreationParameters.serialization.in b/Source/WebKit/Shared/WebPageCreationParameters.serialization.in
+index 18a1ffc1b915..5e5f11390ae8 100644
+--- a/Source/WebKit/Shared/WebPageCreationParameters.serialization.in
++++ b/Source/WebKit/Shared/WebPageCreationParameters.serialization.in
+@@ -257,7 +257,7 @@ enum class WebCore::UserInterfaceLayoutDirection : bool;
+ #endif
+ 
+ #if PLATFORM(GTK) || PLATFORM(WPE)
+-#if USE(GBM)
++#if USE(GBM) || OS(OHOS)
+     Vector<WebKit::RendererBufferFormat> preferredBufferFormats;
+ #endif
+ #endif
+diff --git a/Source/WebKit/SourcesWPE.txt b/Source/WebKit/SourcesWPE.txt
+index 6b0b744d1ab4..71dcb4a96247 100644
+--- a/Source/WebKit/SourcesWPE.txt
++++ b/Source/WebKit/SourcesWPE.txt
+@@ -57,6 +57,7 @@ NetworkProcess/webrtc/NetworkRTCProvider.cpp
+ Platform/IPC/android/ArgumentCodersAndroid.cpp
+ 
+ Platform/IPC/unix/ArgumentCodersUnix.cpp
++Platform/IPC/ohos/ArgumentCodersOHOS.cpp
+ Platform/IPC/unix/ConnectionUnix.cpp
+ Platform/IPC/unix/IPCSemaphoreUnix.cpp
+ 
+diff --git a/Source/WebKit/UIProcess/API/glib/WebKitProtocolHandler.cpp b/Source/WebKit/UIProcess/API/glib/WebKitProtocolHandler.cpp
+index 82ac19eab39f..ae9d5475bfbf 100644
+--- a/Source/WebKit/UIProcess/API/glib/WebKitProtocolHandler.cpp
++++ b/Source/WebKit/UIProcess/API/glib/WebKitProtocolHandler.cpp
+@@ -275,6 +275,9 @@ static String renderBufferDescription(WebKitURISchemeRequest* request)
+             bufferDescription.append("Shared Memory: "_s, String::fromUTF8(formatName));
+             break;
+         }
++        case RendererBufferDescription::Type::OH_NativeBuffer:
++            bufferDescription.append("OH_NativeBuffer: "_s, String::fromUTF8(formatName));
++            break;
+         free(formatName);
+         switch (description.usage) {
+         case RendererBufferFormat::Usage::Rendering:
+diff --git a/Source/WebKit/UIProcess/WebPageProxy.cpp b/Source/WebKit/UIProcess/WebPageProxy.cpp
+index ffa22ccd4e69..d673314e984d 100644
+--- a/Source/WebKit/UIProcess/WebPageProxy.cpp
++++ b/Source/WebKit/UIProcess/WebPageProxy.cpp
+@@ -12088,7 +12088,7 @@ WebPageCreationParameters WebPageProxy::creationParameters(WebProcessProxy& proc
+         parameters.machBootstrapHandle = SandboxExtension::createHandleForMachBootstrapExtension();
+ #endif
+ 
+-#if USE(GBM) && (PLATFORM(GTK) || PLATFORM(WPE))
++#if (PLATFORM(GTK) || PLATFORM(WPE)) && (USE(GBM) || OS(OHOS))
+     parameters.preferredBufferFormats = preferredBufferFormats();
+ #endif
+ 
+diff --git a/Source/WebKit/UIProcess/WebPageProxy.h b/Source/WebKit/UIProcess/WebPageProxy.h
+index 739f7377062f..d04b533b35bf 100644
+--- a/Source/WebKit/UIProcess/WebPageProxy.h
++++ b/Source/WebKit/UIProcess/WebPageProxy.h
+@@ -592,7 +592,7 @@ struct WebPreferencesStore;
+ struct WebSpeechSynthesisVoice;
+ struct WebURLSchemeHandlerIdentifierType;
+ struct WebsitePoliciesData;
+-#if USE(GBM) && (PLATFORM(GTK) || PLATFORM(WPE))
++#if (PLATFORM(GTK) || PLATFORM(WPE)) && (USE(GBM) || OS(OHOS))
+ struct RendererBufferFormat;
+ #endif
+ 
+@@ -2590,7 +2590,7 @@ public:
+     OptionSet<WebCore::AdvancedPrivacyProtections> advancedPrivacyProtectionsPolicies() const { return m_advancedPrivacyProtectionsPolicies; }
+ #endif
+ 
+-#if USE(GBM) && ENABLE(WPE_PLATFORM)
++#if ENABLE(WPE_PLATFORM) && (USE(GBM) || OS(OHOS))
+     void preferredBufferFormatsDidChange();
+ #endif
+ 
+@@ -3040,7 +3040,7 @@ private:
+ #if PLATFORM(GTK) || PLATFORM(WPE)
+     void bindAccessibilityTree(const String&);
+     OptionSet<WebCore::PlatformEventModifier> currentStateOfModifierKeys();
+-#if USE(GBM)
++#if USE(GBM) || OS(OHOS)
+     Vector<RendererBufferFormat> preferredBufferFormats() const;
+ #endif
+ #endif
+diff --git a/Source/WebKit/UIProcess/glib/AcceleratedBackingStore.messages.in b/Source/WebKit/UIProcess/glib/AcceleratedBackingStore.messages.in
+index b092312798fe..7d812385af39 100644
+--- a/Source/WebKit/UIProcess/glib/AcceleratedBackingStore.messages.in
++++ b/Source/WebKit/UIProcess/glib/AcceleratedBackingStore.messages.in
+@@ -24,6 +24,9 @@
+ messages -> AcceleratedBackingStore {
+     DidCreateDMABufBuffer(uint64_t id, WebCore::IntSize size, uint32_t format, Vector<UnixFileDescriptor> fds, Vector<uint32_t> offsets, Vector<uint32_t> strides, uint64_t modifier, WebKit::RendererBufferFormat::Usage usage)
+     DidCreateSHMBuffer(uint64_t id, WebCore::ShareableBitmapHandle handle)
++  #if OS(OHOS)
++    DidCreateOHOSBuffer(uint64_t id, RefPtr<OH_NativeBuffer> ohosBuffer)
++#endif
+     DidDestroyBuffer(uint64_t id)
+     Frame(uint64_t id, Vector<WebCore::IntRect, 1> damage, UnixFileDescriptor syncFD)
+ }
+diff --git a/Source/WebKit/UIProcess/glib/RendererBufferDescription.h b/Source/WebKit/UIProcess/glib/RendererBufferDescription.h
+index a1c67ab6aef8..a6fce9947166 100644
+--- a/Source/WebKit/UIProcess/glib/RendererBufferDescription.h
++++ b/Source/WebKit/UIProcess/glib/RendererBufferDescription.h
+@@ -31,7 +31,11 @@
+ namespace WebKit {
+ 
+ struct RendererBufferDescription {
+-    enum class Type : bool { DMABuf, SharedMemory };
++    enum class Type : uint8_t {
++        DMABuf,
++        SharedMemory,
++        OH_NativeBuffer,
++    };
+ 
+     Type type { Type::DMABuf };
+     RendererBufferFormat::Usage usage { RendererBufferFormat::Usage::Rendering };
+diff --git a/Source/WebKit/UIProcess/wpe/AcceleratedBackingStore.cpp b/Source/WebKit/UIProcess/wpe/AcceleratedBackingStore.cpp
+index 8aa136cef4b4..72c04af18e1f 100644
+--- a/Source/WebKit/UIProcess/wpe/AcceleratedBackingStore.cpp
++++ b/Source/WebKit/UIProcess/wpe/AcceleratedBackingStore.cpp
+@@ -128,6 +128,17 @@ void AcceleratedBackingStore::didCreateSHMBuffer(uint64_t id, WebCore::Shareable
+     m_buffers.add(id, WTFMove(buffer));
+ }
+ 
++#if OS(OHOS)
++void AcceleratedBackingStore::didCreateOHOSBuffer(uint64_t id, RefPtr<OH_NativeBuffer>&& nativeBuffer)
++{
++    RELEASE_ASSERT(nativeBuffer);
++
++    GRefPtr buffer = adoptGRef(WPE_BUFFER(wpe_buffer_ohos_new(wpe_view_get_display(m_wpeView.get()), nativeBuffer.get())));
++    m_bufferIDs.add(buffer.get(), id);
++    m_buffers.add(id, WTFMove(buffer));
++}
++#endif // OS(OHOS)
++
+ void AcceleratedBackingStore::didDestroyBuffer(uint64_t id)
+ {
+     if (auto buffer = m_buffers.take(id))
+@@ -220,6 +231,14 @@ RendererBufferDescription AcceleratedBackingStore::bufferDescription() const
+         description.usage = RendererBufferFormat::Usage::Rendering;
+     }
+ 
++#if OS(OHOS)
++    else if (WPE_IS_BUFFER_OHOS(buffer)) {
++        auto* bufferOHOS = WPE_BUFFER_OHOS(buffer);
++        description.type = RendererBufferDescription::Type::OH_NativeBuffer;
++        description.fourcc = wpe_buffer_ohos_get_format(bufferOHOS);
++    }
++#endif // OS(OHOS)
++
+     return description;
+ }
+ 
+diff --git a/Source/WebKit/UIProcess/wpe/AcceleratedBackingStore.h b/Source/WebKit/UIProcess/wpe/AcceleratedBackingStore.h
+index 0e4efc1c2b44..79d1c0eba084 100644
+--- a/Source/WebKit/UIProcess/wpe/AcceleratedBackingStore.h
++++ b/Source/WebKit/UIProcess/wpe/AcceleratedBackingStore.h
+@@ -40,6 +40,10 @@
+ typedef struct _WPEBuffer WPEBuffer;
+ typedef struct _WPEView WPEView;
+ 
++#if OS(OHOS)
++typedef struct OH_NativeBuffer OH_NativeBuffer;
++#endif // OS(OHOS)
++
+ namespace WebCore {
+ class ShareableBitmapHandle;
+ }
+@@ -77,6 +81,9 @@ private:
+ 
+     void didCreateDMABufBuffer(uint64_t id, const WebCore::IntSize&, uint32_t format, Vector<WTF::UnixFileDescriptor>&&, Vector<uint32_t>&& offsets, Vector<uint32_t>&& strides, uint64_t modifier, RendererBufferFormat::Usage);
+     void didCreateSHMBuffer(uint64_t id, WebCore::ShareableBitmapHandle&&);
++#if OS(OHOS)
++    void didCreateOHOSBuffer(uint64_t id, RefPtr<OH_NativeBuffer>&&);
++#endif // OS(OHOS)
+     void didDestroyBuffer(uint64_t id);
+     void frame(uint64_t bufferID, Rects&&, WTF::UnixFileDescriptor&&);
+     void frameDone();
+diff --git a/Source/WebKit/UIProcess/wpe/WebPageProxyWPE.cpp b/Source/WebKit/UIProcess/wpe/WebPageProxyWPE.cpp
+index 1ce762652b18..4bb9722edc7e 100644
+--- a/Source/WebKit/UIProcess/wpe/WebPageProxyWPE.cpp
++++ b/Source/WebKit/UIProcess/wpe/WebPageProxyWPE.cpp
+@@ -44,11 +44,11 @@
+ #include <wpe/wpe-platform.h>
+ #endif
+ 
+-#if USE(GBM)
++#if USE(GBM) || OS(OHOS)
+ #include "RendererBufferFormat.h"
+ #endif
+ 
+-#if USE(GBM) && ENABLE(WPE_PLATFORM)
++#if ENABLE(WPE_PLATFORM) && (USE(GBM) || OS(OHOS))
+ #include "MessageSenderInlines.h"
+ #include "WebPageMessages.h"
+ #endif
+@@ -123,7 +123,7 @@ void WebPageProxy::setInputMethodState(std::optional<InputMethodState>&& state)
+         static_cast<PageClientImpl&>(*pageClient).setInputMethodState(WTFMove(state));
+ }
+ 
+-#if USE(GBM)
++#if USE(GBM) || OS(OHOS)
+ Vector<RendererBufferFormat> WebPageProxy::preferredBufferFormats() const
+ {
+ #if ENABLE(WPE_PLATFORM)
+@@ -135,8 +135,11 @@ Vector<RendererBufferFormat> WebPageProxy::preferredBufferFormats() const
+     if (!formats)
+         return { };
+ 
+-    Vector<RendererBufferFormat> bufferFormats;
++#if USE(GBM)
+     WPEDRMDevice* mainDevice = wpe_buffer_dma_buf_formats_get_device(formats);
++#endif
++
++    Vector<RendererBufferFormat> bufferFormats;
+     auto groupCount = wpe_buffer_dma_buf_formats_get_n_groups(formats);
+     for (unsigned i = 0; i < groupCount; ++i) {
+         RendererBufferFormat bufferFormat;
+@@ -152,11 +155,13 @@ Vector<RendererBufferFormat> WebPageProxy::preferredBufferFormats() const
+             break;
+         }
+ 
++#if USE(GBM)
+         WPEDRMDevice* targetDevice = wpe_buffer_dma_buf_formats_get_group_device(formats, i);
+         if (!targetDevice)
+             targetDevice = mainDevice;
+         if (targetDevice)
+             bufferFormat.drmDevice = { CString(wpe_drm_device_get_primary_node(targetDevice)), CString(wpe_drm_device_get_render_node(targetDevice)) };
++#endif
+ 
+         auto formatsCount = wpe_buffer_dma_buf_formats_get_group_n_formats(formats, i);
+         bufferFormat.formats.reserveInitialCapacity(formatsCount);
+@@ -182,7 +187,7 @@ Vector<RendererBufferFormat> WebPageProxy::preferredBufferFormats() const
+ #endif
+ }
+ 
+-#if USE(GBM) && ENABLE(WPE_PLATFORM)
++#if ENABLE(WPE_PLATFORM)
+ void WebPageProxy::preferredBufferFormatsDidChange()
+ {
+     auto* view = wpeView();
+diff --git a/Source/WebKit/WPEPlatform/CMakeLists.txt b/Source/WebKit/WPEPlatform/CMakeLists.txt
+index 0095144af857..142ad131927c 100644
+--- a/Source/WebKit/WPEPlatform/CMakeLists.txt
++++ b/Source/WebKit/WPEPlatform/CMakeLists.txt
+@@ -15,6 +15,7 @@ set(WPEPlatform_SOURCES
+     ${WEBKIT_DIR}/WPEPlatform/wpe/WPEBufferAndroid.cpp
+     ${WEBKIT_DIR}/WPEPlatform/wpe/WPEBufferDMABuf.cpp
+     ${WEBKIT_DIR}/WPEPlatform/wpe/WPEBufferDMABufFormats.cpp
++    ${WEBKIT_DIR}/WPEPlatform/wpe/WPEBufferOHOS.cpp
+     ${WEBKIT_DIR}/WPEPlatform/wpe/WPEBufferSHM.cpp
+     ${WEBKIT_DIR}/WPEPlatform/wpe/WPEClipboard.cpp
+     ${WEBKIT_DIR}/WPEPlatform/wpe/WPEColor.cpp
+@@ -50,6 +51,7 @@ set(WPEPlatform_INSTALLED_HEADERS
+     ${WEBKIT_DIR}/WPEPlatform/wpe/WPEBufferAndroid.h
+     ${WEBKIT_DIR}/WPEPlatform/wpe/WPEBufferDMABuf.h
+     ${WEBKIT_DIR}/WPEPlatform/wpe/WPEBufferDMABufFormats.h
++    ${WEBKIT_DIR}/WPEPlatform/wpe/WPEBufferOHOS.h
+     ${WEBKIT_DIR}/WPEPlatform/wpe/WPEBufferSHM.h
+     ${WEBKIT_DIR}/WPEPlatform/wpe/WPEClipboard.h
+     ${WEBKIT_DIR}/WPEPlatform/wpe/WPEColor.h
+@@ -172,6 +174,10 @@ if (NOT USE_SYSTEM_MALLOC)
+    list(APPEND WPEPlatform_LIBRARIES bmalloc)
+ endif ()
+ 
++if (OHOS)
++    list(APPEND WPEPlatform_LIBRARIES OHOS::NativeBuffer OHOS::NativeWindow)
++endif ()
++
+ if (ENABLE_WPE_PLATFORM_DRM)
+     add_subdirectory(${WEBKIT_DIR}/WPEPlatform/wpe/drm)
+     list(APPEND WPEPlatform_LIBRARIES WPEPlatformDRM)
+diff --git a/Source/WebKit/WPEPlatform/wpe/WPEBufferOHOS.cpp b/Source/WebKit/WPEPlatform/wpe/WPEBufferOHOS.cpp
+new file mode 100644
+index 000000000000..e65bee54bb5b
+--- /dev/null
++++ b/Source/WebKit/WPEPlatform/wpe/WPEBufferOHOS.cpp
+@@ -0,0 +1,237 @@
++/*
++ * Copyright (C) 2025 Jani Hautakangas <jani@kodegood.com>
++ *
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions
++ * are met:
++ * 1. Redistributions of source code must retain the above copyright
++ *    notice, this list of conditions and the following disclaimer.
++ * 2. Redistributions in binary form must reproduce the above copyright
++ *    notice, this list of conditions and the following disclaimer in the
++ *    documentation and/or other materials provided with the distribution.
++ *
++ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
++ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
++ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
++ * PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
++ * HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
++ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
++ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
++ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
++ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
++ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
++ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++ */
++
++#include "config.h"
++#include "WPEBufferOHOS.h"
++
++#if OS(OHOS)
++#include <drm/drm_fourcc.h>
++#include <epoxy/egl.h>
++#include <native_buffer/native_buffer.h>
++#include <native_window/external_window.h>
++#include <wtf/glib/GUniquePtr.h>
++#include <wtf/glib/WTFGType.h>
++#include <wtf/unix/UnixFileDescriptor.h>
++
++/**
++ * WPEBufferOHOS:
++ *
++ */
++struct _WPEBufferOHOSPrivate {
++    OH_NativeBuffer* onb;
++    EGLImage eglImage { EGL_NO_IMAGE };
++};
++WEBKIT_DEFINE_FINAL_TYPE(WPEBufferOHOS, wpe_buffer_ohos, WPE_TYPE_BUFFER, WPEBuffer)
++
++static std::function<EGLImage(EGLDisplay, OH_NativeBuffer*)> s_createImage = nullptr;
++static PFNEGLDESTROYIMAGEKHRPROC s_eglDestroyImage = nullptr;
++static PFNEGLCREATEIMAGEKHRPROC s_eglCreateImageKHR = nullptr;
++static PFNEGLCREATEIMAGEPROC s_eglCreateImage = nullptr;
++
++static EGLImage createImageEGL15(EGLDisplay display, OH_NativeBuffer* onb)
++{
++    auto onwb = OH_NativeWindow_CreateNativeWindowBufferFromNativeBuffer(onb);
++    static constexpr std::array<EGLAttrib, 3> attributes = { EGL_IMAGE_PRESERVED, EGL_TRUE, EGL_NONE };
++    return s_eglCreateImage(display, EGL_NO_CONTEXT, EGL_NATIVE_BUFFER_OHOS, onwb, attributes.data());
++}
++
++static EGLImage createImageKHRImageBase(EGLDisplay display, OH_NativeBuffer* onb)
++{
++    auto onwb = OH_NativeWindow_CreateNativeWindowBufferFromNativeBuffer(onb);
++    static constexpr std::array<EGLint, 3> attributes = { EGL_IMAGE_PRESERVED, EGL_TRUE, EGL_NONE };
++    return s_eglCreateImageKHR(display, EGL_NO_CONTEXT, EGL_NATIVE_BUFFER_OHOS, onwb, attributes.data());
++}
++
++static void wpeBufferOHOSDisposeEGLImageIfNeeded(WPEBufferOHOS* ohosBuffer)
++{
++    RELEASE_ASSERT(s_eglDestroyImage);
++
++    auto* priv = ohosBuffer->priv;
++    if (priv->eglImage == EGL_NO_IMAGE)
++        return;
++
++    auto* eglImage = std::exchange(priv->eglImage, EGL_NO_IMAGE);
++    auto* display = wpe_buffer_get_display(WPE_BUFFER(ohosBuffer));
++    if (!display)
++        return;
++
++    if (auto* eglDisplay = wpe_display_get_egl_display(display, nullptr))
++        s_eglDestroyImage(eglDisplay, eglImage);
++}
++
++static void wpeBufferOHOSDispose(GObject* object)
++{
++    auto* ohosBuffer = WPE_BUFFER_OHOS(object);
++
++    wpeBufferOHOSDisposeEGLImageIfNeeded(ohosBuffer);
++    g_clear_pointer(&ohosBuffer->priv->onb, OH_NativeBuffer_Unreference);
++
++    G_OBJECT_CLASS(wpe_buffer_ohos_parent_class)->dispose(object);
++}
++
++static gpointer wpeBufferOHOSImportToEGLImage(WPEBuffer* buffer, GError** error)
++{
++    auto* priv = WPE_BUFFER_OHOS(buffer)->priv;
++    auto* display = wpe_buffer_get_display(buffer);
++    if (!display) {
++        priv->eglImage = EGL_NO_IMAGE;
++        g_set_error_literal(error, WPE_BUFFER_ERROR, WPE_BUFFER_ERROR_IMPORT_FAILED, "The WPE display of the buffer has already been closed");
++        return nullptr;
++    }
++
++    if (priv->eglImage)
++        return priv->eglImage;
++
++    GUniqueOutPtr<GError> eglError;
++    auto* eglDisplay = wpe_display_get_egl_display(display, &eglError.outPtr());
++    if (eglDisplay == EGL_NO_DISPLAY) {
++        g_set_error(error, WPE_BUFFER_ERROR, WPE_BUFFER_ERROR_IMPORT_FAILED, "Failed to get EGLDisplay when importing buffer to EGL image: %s", eglError->message);
++        return nullptr;
++    }
++
++    if (!s_createImage) {
++        if (epoxy_egl_version(eglDisplay) >= 15) {
++            s_eglCreateImage = reinterpret_cast<PFNEGLCREATEIMAGEPROC>(epoxy_eglGetProcAddress("eglCreateImage"));
++            s_eglDestroyImage = reinterpret_cast<PFNEGLDESTROYIMAGEPROC>(epoxy_eglGetProcAddress("eglDestroyImage"));
++            if (s_eglCreateImage && s_eglDestroyImage)
++                s_createImage = createImageEGL15;
++        }
++        if (!s_createImage && epoxy_has_egl_extension(eglDisplay, "EGL_KHR_image_base")) {
++            s_eglCreateImageKHR = reinterpret_cast<PFNEGLCREATEIMAGEKHRPROC>(epoxy_eglGetProcAddress("eglCreateImageKHR"));
++            s_eglDestroyImage = reinterpret_cast<PFNEGLDESTROYIMAGEKHRPROC>(epoxy_eglGetProcAddress("eglDestroyImageKHR"));
++            if (s_eglCreateImageKHR && s_eglDestroyImage)
++                s_createImage = createImageKHRImageBase;
++        }
++        if (!s_createImage) {
++            g_set_error_literal(error, WPE_BUFFER_ERROR, WPE_BUFFER_ERROR_IMPORT_FAILED, "No EGLImage support, EGL 1.5 or EGL_KHR_image needed");
++            return nullptr;
++        }
++    }
++    RELEASE_ASSERT(s_createImage);
++    RELEASE_ASSERT(s_eglDestroyImage);
++
++    priv->eglImage = s_createImage(eglDisplay, priv->onb);
++    if (!priv->eglImage)
++        g_set_error(error, WPE_BUFFER_ERROR, WPE_BUFFER_ERROR_IMPORT_FAILED, "Failed to import buffer to EGL image: eglCreateImageKHR failed with error %#04x", eglGetError());
++    return priv->eglImage;
++}
++
++static void wpe_buffer_ohos_class_init(WPEBufferOHOSClass* bufferOHOSClass)
++{
++    GObjectClass* objectClass = G_OBJECT_CLASS(bufferOHOSClass);
++    objectClass->dispose = wpeBufferOHOSDispose;
++
++    // TODO: Implement import_to_pixels vfunc.
++    WPEBufferClass* bufferClass = WPE_BUFFER_CLASS(bufferOHOSClass);
++    bufferClass->import_to_egl_image = wpeBufferOHOSImportToEGLImage;
++}
++
++/**
++ * wpe_buffer_ohos_new: (constructor):
++ * @display: a #WPEDisplay
++ * @onb: an #OH_NativeBuffer
++ *
++ * Create a new #WPEBufferOHOS for the given buffer.
++ *
++ * The reference count of the @onb will be incremented using
++ * %OH_NativeBuffer_Reference().
++ *
++ * Returns: (transfer full): a #WPEBufferOHOS
++ */
++WPEBufferOHOS* wpe_buffer_ohos_new(WPEDisplay* display, OH_NativeBuffer* onb)
++{
++    g_return_val_if_fail(WPE_IS_DISPLAY(display), nullptr);
++    g_return_val_if_fail(onb != nullptr, nullptr);
++
++    OH_NativeBuffer_Reference(onb);
++
++    OH_NativeBuffer_Config config;
++    OH_NativeBuffer_GetConfig(onb, &config);
++
++    auto* buffer = WPE_BUFFER_OHOS(g_object_new(WPE_TYPE_BUFFER_OHOS,
++        "display", display,
++        "width", config.width,
++        "height", config.height,
++        nullptr));
++
++    buffer->priv->onb = onb;
++
++    return buffer;
++}
++
++/**
++ * wpe_buffer_ohos_get_native_buffer:
++ * @buffer: a #WPEBufferOHOS
++ *
++ * Get the underlying #OH_NativeBuffer for @buffer.
++ * Note that the returned #OH_NativeBuffer might be destroyed along with
++ * the @buffer; and `OH_NativeBuffer_Reference()` may be called on the
++ * returned value to ensure that the underlying #OH_NativeBuffer stays
++ * valid.
++ *
++ * Returns: (transfer none): a valid #OH_NativeBuffer pointer.
++ */
++OH_NativeBuffer* wpe_buffer_ohos_get_native_buffer(WPEBufferOHOS* buffer)
++{
++    g_return_val_if_fail(WPE_IS_BUFFER_OHOS(buffer), nullptr);
++
++    return buffer->priv->onb;
++}
++
++/**
++ * wpe_buffer_ohos_get_format:
++ * @buffer: a #WPEBufferOHOS
++ *
++ * Get the pixel format of the @buffer as a DRM FourCC code.
++ *
++ * Returns: a DRM FourCC code.
++ */
++guint32 wpe_buffer_ohos_get_format(WPEBufferOHOS* buffer)
++{
++    g_return_val_if_fail(WPE_IS_BUFFER_OHOS(buffer), 0);
++
++    OH_NativeBuffer_Config config;
++    OH_NativeBuffer_GetConfig(buffer->priv->onb, &config);
++
++    switch (config.format) {
++    case NATIVEBUFFER_PIXEL_FMT_RGBA_8888:
++        return DRM_FORMAT_RGBA8888;
++    case NATIVEBUFFER_PIXEL_FMT_RGBX_8888:
++        return DRM_FORMAT_RGBX8888;
++    case NATIVEBUFFER_PIXEL_FMT_RGB_888:
++        return DRM_FORMAT_RGB888;
++    case NATIVEBUFFER_PIXEL_FMT_RGB_565:
++        return DRM_FORMAT_RGB565;
++    case NATIVEBUFFER_PIXEL_FMT_RGBA_1010102:
++        return DRM_FORMAT_RGBA1010102;
++    default:
++        RELEASE_ASSERT_NOT_REACHED();
++        return 0;
++    }
++
++    RELEASE_ASSERT_NOT_REACHED();
++    return 0;
++}
++#endif // OS(OHOS)
+diff --git a/Source/WebKit/WPEPlatform/wpe/WPEBufferOHOS.h b/Source/WebKit/WPEPlatform/wpe/WPEBufferOHOS.h
+new file mode 100644
+index 000000000000..3ea11120cdbd
+--- /dev/null
++++ b/Source/WebKit/WPEPlatform/wpe/WPEBufferOHOS.h
+@@ -0,0 +1,58 @@
++
++/*
++ * Copyright (C) 2025 Jani Hautakangas <jani@kodegood.com>
++ *
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions
++ * are met:
++ * 1. Redistributions of source code must retain the above copyright
++ *    notice, this list of conditions and the following disclaimer.
++ * 2. Redistributions in binary form must reproduce the above copyright
++ *    notice, this list of conditions and the following disclaimer in the
++ *    documentation and/or other materials provided with the distribution.
++ *
++ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
++ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
++ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
++ * PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
++ * HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
++ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
++ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
++ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
++ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
++ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
++ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++ */
++
++#ifndef WPEBufferOHOS_h
++#define WPEBufferOHOS_h
++
++#if !defined(__WPE_PLATFORM_H_INSIDE__) && !defined(BUILDING_WEBKIT)
++#error "Only <wpe/wpe-platform.h> can be included directly."
++#endif
++
++#ifndef __GI_SCANNER__
++
++#include <glib-object.h>
++#include <wpe/WPEDefines.h>
++#include <wpe/WPEBuffer.h>
++
++G_BEGIN_DECLS
++
++typedef struct OH_NativeBuffer OH_NativeBuffer;
++
++#define WPE_TYPE_BUFFER_OHOS (wpe_buffer_ohos_get_type())
++WPE_API G_DECLARE_FINAL_TYPE (WPEBufferOHOS, wpe_buffer_ohos, WPE, BUFFER_OHOS, WPEBuffer)
++
++WPE_API WPEBufferOHOS     *wpe_buffer_ohos_new                 (WPEDisplay       *display,
++                                                                OH_NativeBuffer  *onb);
++
++WPE_API OH_NativeBuffer   *wpe_buffer_ohos_get_native_buffer   (WPEBufferOHOS *buffer);
++
++WPE_API guint32            wpe_buffer_ohos_get_format          (WPEBufferOHOS *buffer);
++
++G_END_DECLS
++
++#endif /* !__GI_SCANNER__ */
++
++#endif /* !WPEBufferOHOS_h */
+diff --git a/Source/WebKit/WPEPlatform/wpe/WPEConfig.h.in b/Source/WebKit/WPEPlatform/wpe/WPEConfig.h.in
+index ce9e91f55d2f..5201721249ee 100644
+--- a/Source/WebKit/WPEPlatform/wpe/WPEConfig.h.in
++++ b/Source/WebKit/WPEPlatform/wpe/WPEConfig.h.in
+@@ -31,6 +31,7 @@
+ #endif
+ 
+ #cmakedefine WPE_PLATFORM_BUFFER_ANDROID
++#cmakedefine WPE_PLATFORM_BUFFER_OHOS
+ 
+ #cmakedefine WPE_PLATFORM_DRM
+ #cmakedefine WPE_PLATFORM_HEADLESS
+diff --git a/Source/WebKit/WPEPlatform/wpe/wpe-platform.h b/Source/WebKit/WPEPlatform/wpe/wpe-platform.h
+index 191c7c2fb8ae..e6654c142c6c 100644
+--- a/Source/WebKit/WPEPlatform/wpe/wpe-platform.h
++++ b/Source/WebKit/WPEPlatform/wpe/wpe-platform.h
+@@ -61,6 +61,10 @@
+ #include <wpe/WPEBufferAndroid.h>
+ #endif
+ 
++#ifdef WPE_PLATFORM_BUFFER_OHOS
++#include <wpe/WPEBufferOHOS.h>
++#endif
++
+ #undef __WPE_PLATFORM_H_INSIDE__
+ 
+ #endif /* __WPE_PLATFORM_H__ */
+diff --git a/Source/WebKit/WebProcess/WebPage/CoordinatedGraphics/AcceleratedSurface.cpp b/Source/WebKit/WebProcess/WebPage/CoordinatedGraphics/AcceleratedSurface.cpp
+index ae94fd6e9307..11ce8f79d32f 100644
+--- a/Source/WebKit/WebProcess/WebPage/CoordinatedGraphics/AcceleratedSurface.cpp
++++ b/Source/WebKit/WebProcess/WebPage/CoordinatedGraphics/AcceleratedSurface.cpp
+@@ -64,6 +64,13 @@
+ #include <wtf/UniStdExtras.h>
+ #endif
+ 
++#if OS(OHOS)
++#include <WebCore/BufferFormatOHOS.h>
++#include <native_buffer/native_buffer.h>
++#include <drm/drm_fourcc.h>
++#include <wtf/ohos/RefPtrOHOS.h>
++#endif
++
+ #if USE(GLIB_EVENT_LOOP)
+ #include <wtf/glib/RunLoopSourcePriority.h>
+ #endif
+@@ -100,7 +107,7 @@ AcceleratedSurface::AcceleratedSurface(WebPage& webPage, Function<void()>&& fram
+     , m_useExplicitSync(useExplicitSync())
+     , m_isOpaque(!webPage.backgroundColor().has_value() || webPage.backgroundColor()->isOpaque())
+ {
+-#if USE(GBM) && (PLATFORM(GTK) || ENABLE(WPE_PLATFORM))
++#if (PLATFORM(GTK) || ENABLE(WPE_PLATFORM)) && (USE(GBM) || OS(OHOS))
+     if (m_swapChain.type() == SwapChain::Type::EGLImage)
+         m_swapChain.setupBufferFormat(m_webPage->preferredBufferFormats(), m_isOpaque);
+ #endif
+@@ -316,7 +323,78 @@ AcceleratedSurface::RenderTargetEGLImage::RenderTargetEGLImage(uint64_t surfaceI
+ 
+     WebProcess::singleton().parentProcessConnection()->send(Messages::AcceleratedBackingStore::DidCreateDMABufBuffer(m_id, size, format, WTFMove(fds), WTFMove(offsets), WTFMove(strides), modifier, usage), surfaceID);
+ }
++#endif // USE(GBM)
++
++#if OS(OHOS)
++static uint64_t usageToOHNativeBufferUsage(RendererBufferFormat::Usage usage)
++{
++    switch (usage) {
++    case RendererBufferFormat::Usage::Rendering:
++        return NATIVEBUFFER_USAGE_HW_RENDER;
++    case RendererBufferFormat::Usage::Mapping:
++        return NATIVEBUFFER_USAGE_CPU_READ | NATIVEBUFFER_USAGE_HW_RENDER;
++    case RendererBufferFormat::Usage::Scanout:
++        return NATIVEBUFFER_USAGE_HW_RENDER; // TODO: ???
++    }
++}
++
++std::unique_ptr<AcceleratedSurface::RenderTarget> AcceleratedSurface::RenderTargetEGLImage::create(uint64_t surfaceID, const WebCore::IntSize& size, const BufferFormat& bufferFormat)
++{
++    const auto nativeBufferFormat = toOHNativeBufferFormat(bufferFormat.fourcc);
++    if (!nativeBufferFormat) {
++        LOG_ERROR("Failed to create OH_NativeBuffer of size %dx%d: no valid format found (FourCC=%s)",
++            size.width(), size.height(), FourCC(bufferFormat.fourcc).string().data());
++        return nullptr;
++    }
++
++    OH_NativeBuffer_Config config;
++    config.width = size.width();
++    config.height = size.height();
++    config.format = nativeBufferFormat.value();
++    config.usage = usageToOHNativeBufferUsage(bufferFormat.usage);
++
++    OH_NativeBuffer* nativeBufferPtr = OH_NativeBuffer_Alloc(&config);
++    if (nativeBufferPtr == nullptr) {
++        LOG_ERROR("Failed to create OH_NativeBuffer of size %dx%d, format %s",
++            size.width(), size.height(), FourCC(bufferFormat.fourcc).string().data());
++        return nullptr;
++    }
++
++    RefPtr nativeBuffer = adoptRef(nativeBufferPtr);
++
++    const Vector<EGLAttrib> attributes { EGL_IMAGE_PRESERVED, EGL_TRUE, EGL_NONE };
++
++    auto& display = WebCore::PlatformDisplay::sharedDisplay();
++    auto nativeWindowBufferPtr = OH_NativeWindow_CreateNativeWindowBufferFromNativeBuffer(nativeBufferPtr);
++    auto image = display.createEGLImage(EGL_NO_CONTEXT, EGL_NATIVE_BUFFER_OHOS, nativeWindowBufferPtr, attributes);
++    if (image == EGL_NO_IMAGE) {
++        LOG_ERROR("Failed to bind OH_NativeBuffer to an EGLImage.");
++        return nullptr;
++    }
++    OH_NativeWindow_NativeObjectUnreference(nativeWindowBufferPtr);
++    return makeUnique<RenderTargetEGLImage>(surfaceID, size, image, WTFMove(nativeBuffer));
++}
+ 
++AcceleratedSurface::RenderTargetEGLImage::RenderTargetEGLImage(uint64_t surfaceID, const WebCore::IntSize& size, EGLImage image, RefPtr<OH_NativeBuffer>&& nativeBuffer)
++    : RenderTargetShareableBuffer(surfaceID, size)
++    , m_image(image)
++{
++    glGenRenderbuffers(1, &m_colorBuffer);
++    glBindRenderbuffer(GL_RENDERBUFFER, m_colorBuffer);
++    glEGLImageTargetRenderbufferStorageOES(GL_RENDERBUFFER, m_image);
++    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, m_colorBuffer);
++
++    WebProcess::singleton().parentProcessConnection()->send(Messages::AcceleratedBackingStore::DidCreateOHOSBuffer(m_id, WTFMove(nativeBuffer)), surfaceID);
++}
++
++void AcceleratedSurface::RenderTargetEGLImage::didRenderFrame(Vector<WebCore::IntRect, 1>&& damageRects)
++{
++    glFlush();
++    RenderTargetShareableBuffer::didRenderFrame(WTFMove(damageRects));
++}
++#endif // OS(OHOS)
++
++#if USE(GBM) || OS(OHOS)
+ AcceleratedSurface::RenderTargetEGLImage::~RenderTargetEGLImage()
+ {
+     if (m_colorBuffer)
+@@ -508,6 +586,13 @@ AcceleratedSurface::SwapChain::SwapChain(uint64_t surfaceID)
+     auto& display = PlatformDisplay::sharedDisplay();
+     switch (display.type()) {
+ #if PLATFORM(GTK) || ENABLE(WPE_PLATFORM)
++#if PLATFORM(GTK) || PLATFORM(WPE)
++    case PlatformDisplay::Type::Default:
++#if OS(OHOS)
++        m_type = Type::EGLImage;
++        break;
++#endif
++#endif
+     case PlatformDisplay::Type::Surfaceless:
+         if (display.eglExtensions().MESA_image_dma_buf_export && WebProcess::singleton().rendererBufferTransportMode().contains(RendererBufferTransportMode::Hardware))
+             m_type = Type::Texture;
+@@ -533,7 +618,7 @@ AcceleratedSurface::SwapChain::SwapChain(uint64_t surfaceID)
+     }
+ }
+ 
+-#if USE(GBM) && (PLATFORM(GTK) || ENABLE(WPE_PLATFORM))
++#if (PLATFORM(GTK) || ENABLE(WPE_PLATFORM)) && (USE(GBM) || OS(OHOS))
+ void AcceleratedSurface::SwapChain::setupBufferFormat(const Vector<RendererBufferFormat>& preferredFormats, bool isOpaque)
+ {
+     auto isOpaqueFormat = [](uint32_t fourcc) -> bool {
+@@ -566,8 +651,9 @@ void AcceleratedSurface::SwapChain::setupBufferFormat(const Vector<RendererBuffe
+                     continue;
+ 
+                 newBufferFormat.usage = bufferFormat.usage;
+-                newBufferFormat.drmDevice = bufferFormat.drmDevice;
+                 newBufferFormat.fourcc = preferredFormat.fourcc;
++#if USE(GBM)
++                newBufferFormat.drmDevice = bufferFormat.drmDevice;
+                 if (preferredFormat.modifiers[0] == DRM_FORMAT_MOD_INVALID)
+                     newBufferFormat.modifiers = preferredFormat.modifiers;
+                 else {
+@@ -577,6 +663,7 @@ void AcceleratedSurface::SwapChain::setupBufferFormat(const Vector<RendererBuffe
+                         return std::nullopt;
+                     });
+                 }
++#endif // USE(GBM)
+ 
+                 if (matchesOpacity)
+                     break;
+@@ -590,6 +677,7 @@ void AcceleratedSurface::SwapChain::setupBufferFormat(const Vector<RendererBuffe
+     if (!newBufferFormat.fourcc || newBufferFormat == m_bufferFormat)
+         return;
+ 
++#if USE(GBM)
+     if (!newBufferFormat.drmDevice.isNull()) {
+         if (newBufferFormat.drmDevice == m_bufferFormat.drmDevice && newBufferFormat.usage == m_bufferFormat.usage)
+             newBufferFormat.gbmDevice = m_bufferFormat.gbmDevice;
+@@ -598,6 +686,7 @@ void AcceleratedSurface::SwapChain::setupBufferFormat(const Vector<RendererBuffe
+             newBufferFormat.gbmDevice = DRMDeviceManager::singleton().gbmDevice(newBufferFormat.drmDevice, nodeType);
+         }
+     }
++#endif // USE(GBM)
+ 
+     m_bufferFormat = WTFMove(newBufferFormat);
+     m_bufferFormatChanged = true;
+@@ -624,7 +713,7 @@ std::unique_ptr<AcceleratedSurface::RenderTarget> AcceleratedSurface::SwapChain:
+ {
+     switch (m_type) {
+ #if PLATFORM(GTK) || ENABLE(WPE_PLATFORM)
+-#if USE(GBM)
++#if USE(GBM) || OS(OHOS)
+     case Type::EGLImage:
+         return RenderTargetEGLImage::create(m_surfaceID, m_size, m_bufferFormat);
+ #endif
+@@ -651,7 +740,7 @@ AcceleratedSurface::RenderTarget* AcceleratedSurface::SwapChain::nextTarget()
+         return m_lockedTargets[0].get();
+ #endif
+ 
+-#if USE(GBM) && (PLATFORM(GTK) || ENABLE(WPE_PLATFORM))
++#if (PLATFORM(GTK) || ENABLE(WPE_PLATFORM)) && (USE(GBM) || OS(OHOS))
+     if (m_type == Type::EGLImage) {
+         Locker locker { m_bufferFormatLock };
+         if (m_bufferFormatChanged) {
+@@ -732,7 +821,7 @@ void AcceleratedSurface::SwapChain::addDamage(const std::optional<Damage>& damag
+ }
+ #endif
+ 
+-#if PLATFORM(WPE) && USE(GBM) && ENABLE(WPE_PLATFORM)
++#if PLATFORM(WPE) && ENABLE(WPE_PLATFORM) && (USE(GBM) || OS(OHOS))
+ void AcceleratedSurface::preferredBufferFormatsDidChange()
+ {
+     if (m_swapChain.type() != SwapChain::Type::EGLImage)
+@@ -768,7 +857,7 @@ bool AcceleratedSurface::backgroundColorDidChange()
+ 
+     m_isOpaque = isOpaque;
+ 
+-#if USE(GBM) && (PLATFORM(GTK) || ENABLE(WPE_PLATFORM))
++#if (PLATFORM(GTK) || ENABLE(WPE_PLATFORM)) && (USE(GBM) || OS(OHOS))
+     if (m_swapChain.type() == SwapChain::Type::EGLImage)
+         m_swapChain.setupBufferFormat(m_webPage->preferredBufferFormats(), m_isOpaque);
+ #endif
+@@ -846,6 +935,12 @@ void AcceleratedSurface::willRenderFrame(const IntSize& size)
+         glClearColor(0, 0, 0, 0);
+         glClear(GL_COLOR_BUFFER_BIT);
+     }
++#if OS(OHOS)
++    else {
++        glClearColor(1.0, 1.0, 1.0, 1.0);
++        glClear(GL_COLOR_BUFFER_BIT);
++    }
++#endif
+ }
+ 
+ void AcceleratedSurface::didRenderFrame()
+diff --git a/Source/WebKit/WebProcess/WebPage/CoordinatedGraphics/AcceleratedSurface.h b/Source/WebKit/WebProcess/WebPage/CoordinatedGraphics/AcceleratedSurface.h
+index 2d782b87f83d..32c13abfb594 100644
+--- a/Source/WebKit/WebProcess/WebPage/CoordinatedGraphics/AcceleratedSurface.h
++++ b/Source/WebKit/WebProcess/WebPage/CoordinatedGraphics/AcceleratedSurface.h
+@@ -36,16 +36,26 @@
+ #include <wtf/WeakRef.h>
+ #include <wtf/unix/UnixFileDescriptor.h>
+ 
+-#if USE(GBM)
++#if USE(GBM) || OS(OHOS)
+ #include "RendererBufferFormat.h"
+-#include <WebCore/DRMDevice.h>
+-#include <WebCore/GBMDevice.h>
+ #include <atomic>
+ #include <wtf/Lock.h>
+-typedef void *EGLImage;
++#endif
++
++#if USE(GBM)
++#include <WebCore/DRMDevice.h>
++#include <WebCore/GBMDevice.h>
+ struct gbm_bo;
+ #endif
+ 
++#if OS(OHOS)
++typedef struct OH_NativeBuffer OH_NativeBuffer;
++#endif
++
++#if USE(GBM) || OS(OHOS)
++typedef void *EGLImage;
++#endif
++
+ #if USE(WPE_RENDERER)
+ struct wpe_renderer_backend_egl_target;
+ #endif
+@@ -107,7 +117,7 @@ public:
+     void didCreateCompositingRunLoop(WTF::RunLoop&);
+     void willDestroyCompositingRunLoop();
+ 
+-#if PLATFORM(WPE) && USE(GBM) && ENABLE(WPE_PLATFORM)
++#if PLATFORM(WPE) && ENABLE(WPE_PLATFORM) && (USE(GBM) || OS(OHOS))
+     void preferredBufferFormatsDidChange();
+ #endif
+ 
+@@ -180,7 +190,7 @@ private:
+         UnixFileDescriptor m_releaseFenceFD;
+     };
+ 
+-#if USE(GBM)
++#if USE(GBM) || OS(OHOS)
+     struct BufferFormat {
+         BufferFormat() = default;
+         ~BufferFormat() = default;
+@@ -193,29 +203,43 @@ private:
+         BufferFormat& operator=(BufferFormat&& other)
+         {
+             usage = std::exchange(other.usage, RendererBufferFormat::Usage::Rendering);
+-            drmDevice = WTFMove(other.drmDevice);
+             fourcc = std::exchange(other.fourcc, 0);
++#if USE(GBM)
+             modifiers = WTFMove(other.modifiers);
+             gbmDevice = WTFMove(other.gbmDevice);
++#endif
+             return *this;
+         }
+ 
+         bool operator==(const BufferFormat& other) const
+         {
+-            return usage == other.usage && drmDevice == other.drmDevice && fourcc == other.fourcc && modifiers == other.modifiers;
++            return usage == other.usage
++                && fourcc == other.fourcc
++#if USE(GBM)
++                && drmDevice == other.drmDevice 
++                && modifiers == other.modifiers
++#endif
++                ;
+         }
+ 
+         RendererBufferFormat::Usage usage { RendererBufferFormat::Usage::Rendering };
+-        WebCore::DRMDevice drmDevice;
+         uint32_t fourcc { 0 };
++#if USE(GBM)
++        WebCore::DRMDevice drmDevice;
+         Vector<uint64_t, 1> modifiers;
+         RefPtr<WebCore::GBMDevice> gbmDevice;
++#endif
+     };
+ 
+     class RenderTargetEGLImage final : public RenderTargetShareableBuffer {
+     public:
+         static std::unique_ptr<RenderTarget> create(uint64_t, const WebCore::IntSize&, const BufferFormat&);
+         RenderTargetEGLImage(uint64_t, const WebCore::IntSize&, EGLImage, uint32_t format, Vector<WTF::UnixFileDescriptor>&&, Vector<uint32_t>&& offsets, Vector<uint32_t>&& strides, uint64_t modifier, RendererBufferFormat::Usage);
++#if OS(OHOS)
++        RenderTargetEGLImage(uint64_t, const WebCore::IntSize&, EGLImage, RefPtr<OH_NativeBuffer>&&);
++
++        void didRenderFrame(Vector<WebCore::IntRect, 1>&&) override;
++#endif
+         ~RenderTargetEGLImage();
+ 
+     private:
+@@ -224,7 +248,7 @@ private:
+         unsigned m_colorBuffer { 0 };
+         EGLImage m_image { nullptr };
+     };
+-#endif
++#endif // USE(GBM) || OS(OHOS)
+ 
+     class RenderTargetSHMImage final : public RenderTargetShareableBuffer {
+     public:
+@@ -280,7 +304,7 @@ private:
+         enum class Type {
+             Invalid,
+ #if PLATFORM(GTK) || ENABLE(WPE_PLATFORM)
+-#if USE(GBM)
++#if USE(GBM) || OS(OHOS)
+             EGLImage,
+ #endif
+             SharedMemory,
+@@ -303,7 +327,7 @@ private:
+         void addDamage(const std::optional<WebCore::Damage>&);
+ #endif
+ 
+-#if USE(GBM) && (PLATFORM(GTK) || ENABLE(WPE_PLATFORM))
++#if (PLATFORM(GTK) || ENABLE(WPE_PLATFORM)) && (USE(GBM) || OS(OHOS))
+         void setupBufferFormat(const Vector<RendererBufferFormat>&, bool);
+ #endif
+ 
+@@ -322,7 +346,7 @@ private:
+         WebCore::IntSize m_size;
+         Vector<std::unique_ptr<RenderTarget>, s_maximumBuffers> m_freeTargets;
+         Vector<std::unique_ptr<RenderTarget>, s_maximumBuffers> m_lockedTargets;
+-#if USE(GBM) && (PLATFORM(GTK) || ENABLE(WPE_PLATFORM))
++#if (PLATFORM(GTK) || ENABLE(WPE_PLATFORM)) && (USE(GBM) || OS(OHOS))
+         Lock m_bufferFormatLock;
+         BufferFormat m_bufferFormat WTF_GUARDED_BY_LOCK(m_bufferFormatLock);
+         bool m_bufferFormatChanged WTF_GUARDED_BY_LOCK(m_bufferFormatLock) { false };
+diff --git a/Source/WebKit/WebProcess/WebPage/CoordinatedGraphics/DrawingAreaCoordinatedGraphics.cpp b/Source/WebKit/WebProcess/WebPage/CoordinatedGraphics/DrawingAreaCoordinatedGraphics.cpp
+index f3fad38c1e05..dcd6813b5708 100644
+--- a/Source/WebKit/WebProcess/WebPage/CoordinatedGraphics/DrawingAreaCoordinatedGraphics.cpp
++++ b/Source/WebKit/WebProcess/WebPage/CoordinatedGraphics/DrawingAreaCoordinatedGraphics.cpp
+@@ -788,7 +788,7 @@ void DrawingAreaCoordinatedGraphics::didDiscardBackingStore()
+     m_dirtyRegion = m_webPage->bounds();
+ }
+ 
+-#if PLATFORM(WPE) && USE(GBM) && ENABLE(WPE_PLATFORM)
++#if PLATFORM(WPE) && ENABLE(WPE_PLATFORM) && (USE(GBM) || OS(OHOS))
+ void DrawingAreaCoordinatedGraphics::preferredBufferFormatsDidChange()
+ {
+     if (m_layerTreeHost)
+diff --git a/Source/WebKit/WebProcess/WebPage/CoordinatedGraphics/DrawingAreaCoordinatedGraphics.h b/Source/WebKit/WebProcess/WebPage/CoordinatedGraphics/DrawingAreaCoordinatedGraphics.h
+index b30f14b62876..432df91570b9 100644
+--- a/Source/WebKit/WebProcess/WebPage/CoordinatedGraphics/DrawingAreaCoordinatedGraphics.h
++++ b/Source/WebKit/WebProcess/WebPage/CoordinatedGraphics/DrawingAreaCoordinatedGraphics.h
+@@ -69,7 +69,7 @@ private:
+     void backgroundColorDidChange() override;
+ #endif
+ 
+-#if PLATFORM(WPE) && USE(GBM) && ENABLE(WPE_PLATFORM)
++#if PLATFORM(WPE) && ENABLE(WPE_PLATFORM) && (USE(GBM)|| OS(OHOS))
+     void preferredBufferFormatsDidChange() override;
+ #endif
+ 
+diff --git a/Source/WebKit/WebProcess/WebPage/CoordinatedGraphics/LayerTreeHost.cpp b/Source/WebKit/WebProcess/WebPage/CoordinatedGraphics/LayerTreeHost.cpp
+index ecfa7717accb..b37e018c4654 100644
+--- a/Source/WebKit/WebProcess/WebPage/CoordinatedGraphics/LayerTreeHost.cpp
++++ b/Source/WebKit/WebProcess/WebPage/CoordinatedGraphics/LayerTreeHost.cpp
+@@ -683,7 +683,7 @@ void LayerTreeHost::commitTransientZoom(double scale, FloatPoint origin)
+ }
+ #endif
+ 
+-#if PLATFORM(WPE) && USE(GBM) && ENABLE(WPE_PLATFORM)
++#if PLATFORM(WPE) && ENABLE(WPE_PLATFORM) && (USE(GBM) || OS(OHOS))
+ void LayerTreeHost::preferredBufferFormatsDidChange()
+ {
+     m_compositor->preferredBufferFormatsDidChange();
+diff --git a/Source/WebKit/WebProcess/WebPage/CoordinatedGraphics/LayerTreeHost.h b/Source/WebKit/WebProcess/WebPage/CoordinatedGraphics/LayerTreeHost.h
+index 4ffe3d98d023..02adedd453d7 100644
+--- a/Source/WebKit/WebProcess/WebPage/CoordinatedGraphics/LayerTreeHost.h
++++ b/Source/WebKit/WebProcess/WebPage/CoordinatedGraphics/LayerTreeHost.h
+@@ -137,7 +137,7 @@ public:
+     void foreachRegionInDamageHistoryForTesting(Function<void(const WebCore::Region&)>&&);
+ #endif
+ 
+-#if PLATFORM(WPE) && USE(GBM) && ENABLE(WPE_PLATFORM)
++#if PLATFORM(WPE) && ENABLE(WPE_PLATFORM) && (USE(GBM) || OS(OHOS))
+     void preferredBufferFormatsDidChange();
+ #endif
+ private:
+diff --git a/Source/WebKit/WebProcess/WebPage/CoordinatedGraphics/ThreadedCompositor.cpp b/Source/WebKit/WebProcess/WebPage/CoordinatedGraphics/ThreadedCompositor.cpp
+index 57467730b951..2d13968e868a 100644
+--- a/Source/WebKit/WebProcess/WebPage/CoordinatedGraphics/ThreadedCompositor.cpp
++++ b/Source/WebKit/WebProcess/WebPage/CoordinatedGraphics/ThreadedCompositor.cpp
+@@ -211,7 +211,7 @@ void ThreadedCompositor::backgroundColorDidChange()
+     m_surface->backgroundColorDidChange();
+ }
+ 
+-#if PLATFORM(WPE) && USE(GBM) && ENABLE(WPE_PLATFORM)
++#if PLATFORM(WPE) && ENABLE(WPE_PLATFORM) && (USE(GBM) || OS(OHOS))
+ void ThreadedCompositor::preferredBufferFormatsDidChange()
+ {
+     ASSERT(RunLoop::isMain());
+diff --git a/Source/WebKit/WebProcess/WebPage/CoordinatedGraphics/ThreadedCompositor.h b/Source/WebKit/WebProcess/WebPage/CoordinatedGraphics/ThreadedCompositor.h
+index 57dc3338b0e0..d6474255e220 100644
+--- a/Source/WebKit/WebProcess/WebPage/CoordinatedGraphics/ThreadedCompositor.h
++++ b/Source/WebKit/WebProcess/WebPage/CoordinatedGraphics/ThreadedCompositor.h
+@@ -70,7 +70,7 @@ public:
+     uint64_t surfaceID() const;
+ 
+     void backgroundColorDidChange();
+-#if PLATFORM(WPE) && USE(GBM) && ENABLE(WPE_PLATFORM)
++#if PLATFORM(WPE) && ENABLE(WPE_PLATFORM) && (USE(GBM) || OS(OHOS))
+     void preferredBufferFormatsDidChange();
+ #endif
+ 
+diff --git a/Source/WebKit/WebProcess/WebPage/DrawingArea.h b/Source/WebKit/WebProcess/WebPage/DrawingArea.h
+index b8f3aab47c37..f0807fbe785e 100644
+--- a/Source/WebKit/WebProcess/WebPage/DrawingArea.h
++++ b/Source/WebKit/WebProcess/WebPage/DrawingArea.h
+@@ -174,7 +174,7 @@ public:
+     virtual void backgroundColorDidChange() { };
+ #endif
+ 
+-#if PLATFORM(WPE) && USE(GBM) && ENABLE(WPE_PLATFORM)
++#if PLATFORM(WPE) && ENABLE(WPE_PLATFORM) && (USE(GBM) || OS(OHOS))
+     virtual void preferredBufferFormatsDidChange() { }
+ #endif
+ 
+diff --git a/Source/WebKit/WebProcess/WebPage/WebPage.cpp b/Source/WebKit/WebProcess/WebPage/WebPage.cpp
+index bf2d3f7eccb5..d770056f3906 100644
+--- a/Source/WebKit/WebProcess/WebPage/WebPage.cpp
++++ b/Source/WebKit/WebProcess/WebPage/WebPage.cpp
+@@ -681,7 +681,7 @@ WebPage::WebPage(PageIdentifier pageID, WebPageCreationParameters&& parameters)
+     , m_overriddenMediaType { WTFMove(parameters.overriddenMediaType) }
+     , m_processDisplayName { WTFMove(parameters.processDisplayName) }
+ #if PLATFORM(GTK) || PLATFORM(WPE)
+-#if USE(GBM)
++#if USE(GBM) || OS(OHOS)
+     , m_preferredBufferFormats(WTFMove(parameters.preferredBufferFormats))
+ #endif
+ #endif
+diff --git a/Source/WebKit/WebProcess/WebPage/WebPage.h b/Source/WebKit/WebProcess/WebPage/WebPage.h
+index a52dd2ff7fef..0d8b7d59cc60 100644
+--- a/Source/WebKit/WebProcess/WebPage/WebPage.h
++++ b/Source/WebKit/WebProcess/WebPage/WebPage.h
+@@ -472,7 +472,7 @@ enum class WebEventType : uint8_t;
+ struct ContentWorldData;
+ struct ContentWorldIdentifierType;
+ struct CoreIPCAuditToken;
+-#if (PLATFORM(GTK) || PLATFORM(WPE)) && USE(GBM)
++#if (PLATFORM(GTK) || PLATFORM(WPE)) && (USE(GBM) || OS(OHOS))
+ struct RendererBufferFormat;
+ #endif
+ struct DataDetectionResult;
+@@ -1954,11 +1954,9 @@ public:
+     const Logger& logger() const;
+     uint64_t logIdentifier() const;
+ 
+-#if PLATFORM(GTK) || PLATFORM(WPE)
+-#if USE(GBM)
++#if (PLATFORM(GTK) || PLATFORM(WPE)) && (USE(GBM) || OS(OHOS))
+     const Vector<RendererBufferFormat>& preferredBufferFormats() const { return m_preferredBufferFormats; }
+ #endif
+-#endif
+ 
+ #if ENABLE(EXTENSION_CAPABILITIES)
+     const String& mediaEnvironment() const { return m_mediaEnvironment; }
+@@ -2511,7 +2509,7 @@ private:
+     void sendMessageToWebProcessExtensionWithReply(UserMessage&&, CompletionHandler<void(UserMessage&&)>&&);
+ #endif
+ 
+-#if PLATFORM(WPE) && USE(GBM) && ENABLE(WPE_PLATFORM)
++#if PLATFORM(WPE) && ENABLE(WPE_PLATFORM) && (USE(GBM) || OS(OHOS))
+     void preferredBufferFormatsDidChange(Vector<RendererBufferFormat>&&);
+ #endif
+ 
+@@ -3043,11 +3041,9 @@ private:
+     WebCore::Color m_accentColor;
+ #endif
+ 
+-#if PLATFORM(GTK) || PLATFORM(WPE)
+-#if USE(GBM)
++#if (PLATFORM(GTK) || PLATFORM(WPE)) && (USE(GBM) || OS(OHOS))
+     Vector<RendererBufferFormat> m_preferredBufferFormats;
+ #endif
+-#endif
+ 
+ #if ENABLE(APP_BOUND_DOMAINS)
+     bool m_limitsNavigationsToAppBoundDomains { false };
+diff --git a/Source/WebKit/WebProcess/WebPage/WebPage.messages.in b/Source/WebKit/WebProcess/WebPage/WebPage.messages.in
+index 2e19c3db3a91..c4bea4062974 100644
+--- a/Source/WebKit/WebProcess/WebPage/WebPage.messages.in
++++ b/Source/WebKit/WebProcess/WebPage/WebPage.messages.in
+@@ -710,7 +710,7 @@ messages -> WebPage WantsAsyncDispatchMessage {
+     SendMessageToWebProcessExtensionWithReply(struct WebKit::UserMessage userMessage) -> (struct WebKit::UserMessage replyMessage)
+ #endif
+ 
+-#if PLATFORM(WPE) && USE(GBM) && ENABLE(WPE_PLATFORM)
++#if PLATFORM(WPE) && ENABLE(WPE_PLATFORM) && (USE(GBM) || OS(OHOS))
+     PreferredBufferFormatsDidChange(Vector<WebKit::RendererBufferFormat> preferredBufferFormats)
+ #endif
+ 
+diff --git a/Source/WebKit/WebProcess/WebPage/wpe/WebPageWPE.cpp b/Source/WebKit/WebProcess/WebPage/wpe/WebPageWPE.cpp
+index ce635e196f8c..9bbf83fa9817 100644
+--- a/Source/WebKit/WebProcess/WebPage/wpe/WebPageWPE.cpp
++++ b/Source/WebKit/WebProcess/WebPage/wpe/WebPageWPE.cpp
+@@ -43,7 +43,7 @@ bool WebPage::platformCanHandleRequest(const ResourceRequest&)
+     return false;
+ }
+ 
+-#if USE(GBM) && ENABLE(WPE_PLATFORM)
++#if ENABLE(WPE_PLATFORM) && (USE(GBM) || OS(OHOS))
+ void WebPage::preferredBufferFormatsDidChange(Vector<RendererBufferFormat>&& preferredBufferFormats)
+ {
+     m_preferredBufferFormats = WTFMove(preferredBufferFormats);
+diff --git a/Source/WebKit/WebProcess/glib/WebProcessGLib.cpp b/Source/WebKit/WebProcess/glib/WebProcessGLib.cpp
+index 3305f8d89b79..e123dfce87f3 100644
+--- a/Source/WebKit/WebProcess/glib/WebProcessGLib.cpp
++++ b/Source/WebKit/WebProcess/glib/WebProcessGLib.cpp
+@@ -64,7 +64,7 @@
+ #include <WebCore/PlatformDisplaySurfaceless.h>
+ #endif
+ 
+-#if PLATFORM(GTK)
++#if PLATFORM(GTK) || PLATFORM(WPE)
+ #include <WebCore/PlatformDisplayDefault.h>
+ #endif
+ 
+@@ -162,7 +162,7 @@ void WebProcess::initializePlatformDisplayIfNeeded() const
+         return;
+     }
+ 
+-#if PLATFORM(GTK)
++#if PLATFORM(GTK) || PLATFORM(WPE)
+     if (auto display = PlatformDisplayDefault::create()) {
+         PlatformDisplay::setSharedDisplay(WTFMove(display));
+         return;
+diff --git a/Source/cmake/FindOHOS.cmake b/Source/cmake/FindOHOS.cmake
+new file mode 100644
+index 000000000000..12941663af14
+--- /dev/null
++++ b/Source/cmake/FindOHOS.cmake
+@@ -0,0 +1,150 @@
++# Copyright (C) 2025 Jani Hautakangas <jani@kodegood.com>
++#
++# Redistribution and use in source and binary forms, with or without
++# modification, are permitted provided that the following conditions
++# are met:
++# 1.  Redistributions of source code must retain the above copyright
++#     notice, this list of conditions and the following disclaimer.
++# 2.  Redistributions in binary form must reproduce the above copyright
++#     notice, this list of conditions and the following disclaimer in the
++#     documentation and/or other materials provided with the distribution.
++#
++# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER AND ITS CONTRIBUTORS ``AS
++# IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
++# THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
++# PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR ITS
++# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
++# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
++# PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
++# OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
++# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
++# OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
++# ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++
++#[=======================================================================[.rst:
++FindOHOS
++-----------
++
++Find OHOS SDK headers and libraries.
++
++This module supports checking for the following components:
++
++``NativeBuffer``
++  The OH_NativeBuffer ``libnative_buffer`` library.
++``NativeWindow``
++  The OH_NativeWindow_* ``libnative_window`` library.
++``Log``
++  The logging ``libhilog_ndk.z`` library.
++
++Imported Targets
++^^^^^^^^^^^^^^^^
++
++For each supported component, the corresponding `OHOS::<name>` target
++will be defined, for example `OHOS::NativeBuffer`, if found.
++
++Result Variables
++^^^^^^^^^^^^^^^^
++
++This will define the following variables in your project, for each
++component given its `<name>`:
++
++``OHOS_<name>_FOUND``
++  True if the component `<name>` is available.
++
++#]=======================================================================]
++
++if (NOT OHOS)
++    return()
++endif ()
++
++include(CMakePushCheckState)
++include(CheckFunctionExists)
++include(CheckIncludeFile)
++
++function(_OHOSHandleComponent target)
++    if (TARGET OHOS::${target})
++        message(DEBUG "OHOS::${target} already checked, skipping")
++        return()
++    endif ()
++
++    if (NOT OHOS_COMPONENT_${target}_LIBRARY)
++        message(CHECK_FAIL "Invalid component name")
++        return()
++    endif ()
++
++    set(libname "${OHOS_COMPONENT_${target}_LIBRARY}")
++    set(header "${OHOS_COMPONENT_${target}_HEADER}")
++    set(symbol "${OHOS_COMPONENT_${target}_SYMBOL}")
++    set(deps "${OHOS_COMPONENT_${target}_DEPS}")
++    set(deplibs "${libname}")
++
++    foreach (dep IN LISTS deps)
++        if (OHOS_FIND_REQUIRED_${target} AND NOT OHOS_FIND_REQUIRED_${dep})
++            set(OHOS_FIND_REQUIRED_${dep} TRUE PARENT_SCOPE)
++        endif ()
++        _OHOSHandleComponent(${dep})
++        list(APPEND deplibs OHOS::${dep})
++    endforeach ()
++
++    check_include_file("${header}" OHOS_COMPONENT_${target}_HAS_HEADER)
++    if (NOT OHOS_COMPONENT_${target}_HAS_HEADER)
++        message(STATUS "Missing header ${header}")
++        return()
++    endif ()
++
++    cmake_push_check_state(RESET)
++    set(CMAKE_REQUIRED_LIBRARIES "${libname}")
++    check_function_exists("${symbol}" OHOS_COMPONENT_${target}_HAS_SYMBOL)
++    cmake_pop_check_state()
++    if (NOT OHOS_COMPONENT_${target}_HAS_SYMBOL)
++        message(STATUS "Missing symbol ${symbol}")
++        return()
++    endif ()
++
++    add_library(OHOS::${target} INTERFACE IMPORTED)
++    set_target_properties(OHOS::${target} PROPERTIES
++        INTERFACE_LINK_LIBRARIES "${deplibs}")
++    set(OHOS_${target}_FOUND TRUE PARENT_SCOPE)
++endfunction()
++
++function(_OHOSDefineComponent target libname header symbol)
++    if (OHOS_COMPONENT_${target}_LIBRARY)
++        message(FATAL_ERROR "OHOS::${target} component already defined")
++    endif ()
++    cmake_parse_arguments(PARSE_ARGV 4 opt "" "" "")
++    set(OHOS_COMPONENT_${target}_LIBRARY "${libname}" PARENT_SCOPE)
++    set(OHOS_COMPONENT_${target}_HEADER "${header}" PARENT_SCOPE)
++    set(OHOS_COMPONENT_${target}_SYMBOL "${symbol}" PARENT_SCOPE)
++    set(OHOS_COMPONENT_${target}_DEPS "${opt_UNPARSED_ARGUMENTS}" PARENT_SCOPE)
++endfunction()
++
++_OHOSDefineComponent(NativeBuffer
++    native_buffer
++    native_buffer/native_buffer.h
++    OH_NativeBuffer_Alloc
++)
++_OHOSDefineComponent(NativeWindow
++    native_window
++    native_window/external_window.h
++    OH_NativeWindow_CreateNativeWindowBufferFromNativeBuffer
++)
++_OHOSDefineComponent(Log
++    hilog_ndk.z
++    hilog/log.h
++    OH_LOG_Print
++)
++
++foreach (component IN LISTS OHOS_FIND_COMPONENTS)
++    message(CHECK_START "Checking OHOS::${component}")
++    list(APPEND CMAKE_MESSAGE_INDENT "  ")
++    _OHOSHandleComponent(${component})
++    list(POP_BACK CMAKE_MESSAGE_INDENT)
++    if (Android_${component}_FOUND)
++        message(CHECK_PASS "OK")
++    else ()
++        message(CHECK_FAIL "Failed")
++    endif ()
++endforeach ()
++
++include(FindPackageHandleStandardArgs)
++find_package_handle_standard_args(OHOS HANDLE_COMPONENTS)
+diff --git a/Source/cmake/OptionsWPE.cmake b/Source/cmake/OptionsWPE.cmake
+index d19e7b37fc19..0e980643ace0 100644
+--- a/Source/cmake/OptionsWPE.cmake
++++ b/Source/cmake/OptionsWPE.cmake
+@@ -33,6 +33,10 @@ else ()
+     set(ENABLE_MEDIA_SESSION_DEFAULT ON)
+ endif ()
+ 
++if (OHOS)
++  find_package(OHOS REQUIRED COMPONENTS NativeBuffer NativeWindow Log)
++endif ()
++
+ WEBKIT_OPTION_BEGIN()
+ 
+ SET_AND_EXPOSE_TO_BUILD(ENABLE_DEVELOPER_MODE ${DEVELOPER_MODE})
+@@ -291,6 +295,11 @@ if (ENABLE_WPE_PLATFORM)
+         set(WPE_PLATFORM_HEADLESS ON)
+     endif ()
+ 
++    if (OHOS)
++        SET_AND_EXPOSE_TO_BUILD(ENABLE_WPE_PLATFORM_HEADLESS ON)
++        set(WPE_PLATFORM_HEADLESS ON)
++    endif ()
++
+     if (ENABLE_WPE_PLATFORM_WAYLAND)
+         find_package(Wayland 1.20 REQUIRED)
+         find_package(WaylandProtocols 1.24 REQUIRED)
+-- 
+2.48.1
+

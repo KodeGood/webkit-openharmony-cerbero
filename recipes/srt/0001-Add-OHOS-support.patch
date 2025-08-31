@@ -1,0 +1,38 @@
+From 4eb9bc87e911756c71c02575da64f265428ec0eb Mon Sep 17 00:00:00 2001
+From: Jani Hautakangas <jani@kodegood.com>
+Date: Mon, 1 Sep 2025 21:46:14 +0300
+Subject: [PATCH] Add OHOS support
+
+---
+ CMakeLists.txt         | 1 -
+ srtcore/sync_posix.cpp | 2 +-
+ 2 files changed, 1 insertion(+), 2 deletions(-)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 1492306..849a6fd 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -1002,7 +1002,6 @@ if (srt_libspec_shared)
+ 	# shared libraries need PIC
+ 	set (CMAKE_POSITION_INDEPENDENT_CODE ON)
+ 	set_property(TARGET ${TARGET_srt}_shared PROPERTY OUTPUT_NAME ${TARGET_srt})
+-	set_target_properties (${TARGET_srt}_shared PROPERTIES VERSION ${SRT_VERSION} SOVERSION ${SRT_VERSION_MAJOR}.${SRT_VERSION_MINOR})
+ 	list (APPEND INSTALL_TARGETS ${TARGET_srt}_shared)
+ 	if (ENABLE_ENCRYPTION)
+ 		target_link_libraries(${TARGET_srt}_shared PRIVATE ${SSL_LIBRARIES})
+diff --git a/srtcore/sync_posix.cpp b/srtcore/sync_posix.cpp
+index 8cb475e..e687027 100644
+--- a/srtcore/sync_posix.cpp
++++ b/srtcore/sync_posix.cpp
+@@ -393,7 +393,7 @@ srt::sync::CThread& srt::sync::CThread::operator=(CThread& other)
+         LOGC(inlog.Error, log << "IPE: Assigning to a thread that is not terminated!");
+ 
+ #ifndef DEBUG
+-#ifndef __ANDROID__
++#if !defined(__ANDROID__) && !defined(__OHOS__)
+         // In case of production build the hanging thread should be terminated
+         // to avoid hang ups and align with C++11 implementation.
+         // There is no pthread_cancel on Android. See #1476. This error should not normally
+-- 
+2.48.1
+

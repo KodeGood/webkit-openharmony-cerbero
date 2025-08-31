@@ -1,0 +1,34 @@
+From 4a3a71ca0a7b620058df1e80f8fa671f30e892b2 Mon Sep 17 00:00:00 2001
+From: Jani Hautakangas <jani@kodegood.com>
+Date: Sun, 5 Oct 2025 00:18:48 +0300
+Subject: [PATCH] Add OHOS support
+
+---
+ meson.build | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/meson.build b/meson.build
+index 771f72b..43845e2 100644
+--- a/meson.build
++++ b/meson.build
+@@ -60,7 +60,7 @@ deps += [libm_dep]
+ use_asm_gen = false
+ build_asm = get_option('asm').allowed()
+ if build_asm
+-  if ['linux', 'android', 'ios', 'darwin'].contains(system)
++  if ['linux', 'android', 'ios', 'darwin', 'ohos'].contains(system)
+     asm_format32 = 'elf'
+     asm_format64 = 'elf64'
+     if ['ios', 'darwin'].contains(system)
+@@ -103,7 +103,7 @@ if build_asm
+       error('FIXME: unhandled CPU family @0@ for @1@'.format(cpu_family, system))
+     endif
+ 
+-    if ['ios', 'darwin', 'android'].contains(system)
++    if ['ios', 'darwin', 'android', 'ohos'].contains(system)
+       cpp_lib = '-lc++'
+     endif
+   elif system == 'windows'
+-- 
+2.48.1
+

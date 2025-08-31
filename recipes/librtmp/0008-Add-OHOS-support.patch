@@ -1,0 +1,58 @@
+From c8a88b8e593953f60e7425d6f6a18e48bb615540 Mon Sep 17 00:00:00 2001
+From: Jani Hautakangas <jani@kodegood.com>
+Date: Tue, 7 Jan 2025 15:20:00 +0300
+Subject: [PATCH] Add OHOS support
+
+---
+ librtmp/Makefile | 16 +++++++++++++---
+ 1 file changed, 13 insertions(+), 3 deletions(-)
+
+diff --git a/librtmp/Makefile b/librtmp/Makefile
+index 56629c2..9ca2466 100644
+--- a/librtmp/Makefile
++++ b/librtmp/Makefile
+@@ -39,14 +39,20 @@ CRYPTO_REQ=$(REQ_$(CRYPTO))
+ CRYPTO_DEF=$(DEF_$(CRYPTO))
+ PUBLIC_LIBS=$(PUB_$(CRYPTO))
+ 
+-SO_VERSION=1
++SO_VERSION?=1
+ SOX_posix=so
+ SOX_darwin=dylib
+ SOX_mingw=dll
+ SOX=$(SOX_$(SYS))
++ifeq ($(strip $(SO_VERSION)),)
++SO_posix=.$(SOX)
++SO_darwin=.$(SOX)
++SO_mingw=-$(SOX)
++else
+ SO_posix=.$(SOX).$(SO_VERSION)
+ SO_darwin=.$(SO_VERSION).$(SOX)
+ SO_mingw=-$(SO_VERSION).$(SOX)
++endif
+ SO_EXT=$(SO_$(SYS))
+ 
+ SODIR_posix=$(LIBDIR)
+@@ -91,7 +97,9 @@ librtmp.a: $(OBJS)
+ 
+ librtmp$(SO_EXT): $(OBJS)
+ 	$(CC) $(SO_LDFLAGS) $(LDFLAGS) -o $@ $^ $> $(CRYPTO_LIB)
+-	ln -sf $@ librtmp.$(SOX)
++	@if [ -n "$(strip $(SO_VERSION))" ]; then \
++		ln -sf $@ librtmp.$(SOX); \
++	fi
+ 
+ log.o: log.c log.h Makefile
+ rtmp.o: rtmp.c rtmp.h rtmp_sys.h handshake.h dh.h log.h amf.h Makefile
+@@ -118,5 +126,7 @@ install_base:	librtmp.a librtmp.pc
+ install_so:	librtmp$(SO_EXT)
+ 	cp librtmp$(SO_EXT) $(SODIR)
+ 	$(INSTALL_IMPLIB)
+-	cd $(SODIR); ln -sf librtmp$(SO_EXT) librtmp.$(SOX)
++	@if [ -n "$(strip $(SO_VERSION))" ]; then \
++		cd $(SODIR); ln -sf librtmp$(SO_EXT) librtmp.$(SOX); \
++	fi
+ 
+-- 
+2.48.1
+

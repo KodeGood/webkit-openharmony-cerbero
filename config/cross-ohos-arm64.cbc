@@ -1,0 +1,8 @@
+import os
+from cerbero.config import Platform, Architecture, Distro, DistroVersion
+
+target_platform = Platform.OHOS
+target_distro = Distro.OHOS
+target_distro_version = DistroVersion.OHOS_6_0
+target_arch = Architecture.ARM64
+

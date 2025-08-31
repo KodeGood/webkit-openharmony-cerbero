@@ -20,7 +20,8 @@ class Recipe(recipe.Recipe):
     files_devel = ['include/nghttp2/nghttp2.h', '%(libdir)s/pkgconfig/libnghttp2.pc']
 
     patches = [
-        f'{name}/0001-Expose-NGHTTP2_STATICLIB-on-the-pkg-config-file.patch'
+        f'{name}/0001-Expose-NGHTTP2_STATICLIB-on-the-pkg-config-file.patch',
+        f'{name}/0001-Add-OHOS-support.patch'
     ]
 
     def prepare(self):

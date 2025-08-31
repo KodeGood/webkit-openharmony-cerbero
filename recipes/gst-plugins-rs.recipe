@@ -101,7 +101,7 @@ class Recipe(recipe.Recipe):
             ]
 
     def prepare(self):
-        if self.config.target_platform in (Platform.IOS, Platform.ANDROID):
+        if self.config.target_platform in [Platform.IOS, Platform.ANDROID, Platform.OHOS]:
             self.library_type = LibraryType.STATIC
         else:
             self.library_type = LibraryType.BOTH
@@ -292,7 +292,7 @@ class Recipe(recipe.Recipe):
 
                         # And now we paper over
                         os.replace(dest.absolute(), source.absolute())
-                elif self.config.target_platform in (Platform.LINUX, Platform.ANDROID): 
+                elif self.config.target_platform in [Platform.LINUX, Platform.ANDROID, Platform.OHOS]: 
                     # This is a very similar approach, however Clang
                     # will itself do a really bad job if one supplies
                     # a LD version script -- that'll suppress 99% of
@@ -312,6 +312,9 @@ class Recipe(recipe.Recipe):
                         if self.config.target_platform == Platform.ANDROID:
                             ar = shutil.which('llvm-ar',
                                                 path=self.config.env['ANDROID_NDK_TOOLCHAIN_BIN'])
+                        elif self.config.target_platform == Platform.OHOS:
+                            ar = shutil.which('llvm-ar',
+                                                path=self.config.env['OHOS_SDK_NATIVE_TOOLCHAIN_BIN'])
                         else:
                             ar = shutil.which('llvm-ar')
                             if not ar:
@@ -329,6 +332,9 @@ class Recipe(recipe.Recipe):
                         if self.config.target_platform == Platform.ANDROID:
                             ld = shutil.which("ld.lld",
                                                 path=self.config.env['ANDROID_NDK_TOOLCHAIN_BIN'])
+                        elif self.config.target_platform == Platform.OHOS:
+                            ld = shutil.which("ld.lld",
+                                                path=self.config.env['OHOS_SDK_NATIVE_TOOLCHAIN_BIN'])
                         else:
                             ld = shutil.which('ld')
                         if ld is None:
@@ -356,6 +362,9 @@ class Recipe(recipe.Recipe):
                         if self.config.target_platform == Platform.ANDROID:
                             objcopy = shutil.which("llvm-objcopy",
                                                 path=self.config.env['ANDROID_NDK_TOOLCHAIN_BIN'])
+                        elif self.config.target_platform == Platform.OHOS:
+                            objcopy = shutil.which("llvm-objcopy",
+                                                path=self.config.env['OHOS_SDK_NATIVE_TOOLCHAIN_BIN'])
                         else:
                             objcopy = shutil.which("llvm-objcopy")
                             if objcopy is None:

@@ -1,0 +1,54 @@
+From 630a0cd9e8801d40a1672ad2bfaf4e9c87d8154d Mon Sep 17 00:00:00 2001
+From: Jani Hautakangas <jani@kodegood.com>
+Date: Sun, 5 Oct 2025 19:25:38 +0300
+Subject: [PATCH] Add OHOS support
+
+---
+ CMakeLists.txt                  | 4 ----
+ src/lib/openjp2/CMakeLists.txt  | 1 -
+ src/lib/openjpip/CMakeLists.txt | 2 --
+ 3 files changed, 7 deletions(-)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 65570b4..1d72bcc 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -60,10 +60,6 @@ set(PACKAGE_VERSION
+ if(NOT OPENJPEG_SOVERSION)
+   set(OPENJPEG_SOVERSION 7)
+ endif(NOT OPENJPEG_SOVERSION)
+-set(OPENJPEG_LIBRARY_PROPERTIES
+-  VERSION   "${OPENJPEG_VERSION_MAJOR}.${OPENJPEG_VERSION_MINOR}.${OPENJPEG_VERSION_BUILD}"
+-  SOVERSION "${OPENJPEG_SOVERSION}"
+-)
+ 
+ # --------------------------------------------------------------------------
+ # Path to additional CMake modules
+diff --git a/src/lib/openjp2/CMakeLists.txt b/src/lib/openjp2/CMakeLists.txt
+index 99cf580..e3837e3 100644
+--- a/src/lib/openjp2/CMakeLists.txt
++++ b/src/lib/openjp2/CMakeLists.txt
+@@ -108,7 +108,6 @@ target_include_directories(${OPENJPEG_LIBRARY_NAME} PUBLIC $<INSTALL_INTERFACE:$
+ if(UNIX)
+   target_link_libraries(${OPENJPEG_LIBRARY_NAME} m)
+ endif()
+-set_target_properties(${OPENJPEG_LIBRARY_NAME} PROPERTIES ${OPENJPEG_LIBRARY_PROPERTIES})
+ target_compile_options(${OPENJPEG_LIBRARY_NAME} PRIVATE ${OPENJP2_COMPILE_OPTIONS})
+ 
+ # Install library
+diff --git a/src/lib/openjpip/CMakeLists.txt b/src/lib/openjpip/CMakeLists.txt
+index e9d8193..015cc56 100644
+--- a/src/lib/openjpip/CMakeLists.txt
++++ b/src/lib/openjpip/CMakeLists.txt
+@@ -60,8 +60,6 @@ if(WIN32)
+   endif()
+ endif()
+ add_library(openjpip ${OPENJPIP_SRCS} ${LOCAL_SRCS})
+-set_target_properties(openjpip
+-  PROPERTIES ${OPENJPEG_LIBRARY_PROPERTIES})
+ target_compile_options(openjpip PRIVATE ${OPENJPEG_LIBRARY_COMPILE_OPTIONS})
+ target_link_libraries(openjpip ${OPENJPEG_LIBRARY_NAME})
+ if(WIN32)
+-- 
+2.48.1
+

@@ -27,6 +27,7 @@ class Recipe(recipe.Recipe):
 
     patches = [
         'taglib/0002-Build-a-static-and-non-static-version.patch',
+        'taglib/0001-Add-OHOS-support.patch',
     ]
 
     files_libs = ['libtag']
@@ -39,6 +40,9 @@ class Recipe(recipe.Recipe):
             # configure for android
             self.configure_options += ' -DANDROID_NDK=1 '
             self.append_env('CXXFLAGS', '-frtti', '-fexceptions')
+        if self.config.target_platform == Platform.OHOS:
+            self.append_env('CXXFLAGS', '-frtti', '-fexceptions')
+
         self.configure_options += ' -DZLIB_ROOT=%s ' % self.config.prefix
 
     async def install(self):

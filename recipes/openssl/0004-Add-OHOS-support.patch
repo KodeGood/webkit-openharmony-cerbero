@@ -1,0 +1,113 @@
+From 5ce8802f6100898dfa272082016490fdd832b088 Mon Sep 17 00:00:00 2001
+From: Jani Hautakangas <jani@kodegood.com>
+Date: Tue, 7 Oct 2025 19:59:27 +0300
+Subject: [PATCH] Add OHOS support
+
+---
+ Configurations/15-ohos.conf | 80 +++++++++++++++++++++++++++++++++++++
+ include/internal/cryptlib.h |  2 +
+ 2 files changed, 82 insertions(+)
+ create mode 100644 Configurations/15-ohos.conf
+
+diff --git a/Configurations/15-ohos.conf b/Configurations/15-ohos.conf
+new file mode 100644
+index 0000000..a2a7bbd
+--- /dev/null
++++ b/Configurations/15-ohos.conf
+@@ -0,0 +1,80 @@
++#### OpenHarmony (OHOS)
++#
++# Configuration helpers for building OpenSSL for OpenHarmony OS.
++# These largely mirror the Android support but use the OHOS SDK
++# environment variables exposed by the cerbero toolchain glue.
++
++{
++    use File::Spec::Functions;
++
++    my $ohos_sdk = {};
++    my %triplet = (
++        arm64  => "aarch64-linux-ohos",
++        x86_64 => "x86_64-linux-ohos",
++    );
++
++    sub ohos_sdk {
++        unless (%$ohos_sdk) {
++            if ($now_printing =~ m|^ohos|) {
++                return $ohos_sdk = { bn_ops => "BN_AUTO" };
++            }
++
++            my $sdk = $ENV{OHOS_SDK_NATIVE}
++                // die '$OHOS_SDK_NATIVE is not defined';
++            $sdk = canonpath($sdk);
++
++            $config{target} =~ m|^ohos-([^-]+)$|
++                or die "Unable to determine OHOS arch from $config{target}";
++            my $arch = $1;
++            my $triarch = $triplet{$arch}
++                // die "Unsupported OHOS arch '$arch'";
++
++            my $sysroot = $ENV{CROSS_SYSROOT};
++            if (!defined $sysroot || $sysroot eq '') {
++                $sysroot = canonpath(catdir($sdk, 'sysroot'));
++            }
++            die "no sysroot=$sysroot" if !-d $sysroot;
++
++            my $arch_include = canonpath(catdir($sysroot, 'usr', 'include', $triarch));
++            my $sys_include  = canonpath(catdir($sysroot, 'usr', 'include'));
++
++            my $cppflags = '';
++            $cppflags .= " -isystem $arch_include" if -d $arch_include;
++            $cppflags .= " -isystem $sys_include";
++
++            my $cflags = " --sysroot=$sysroot";
++            my $bn_ops = $arch =~ m/64$/ ? "SIXTY_FOUR_BIT_LONG" : "BN_LLONG";
++
++            $ohos_sdk = {
++                cflags   => $cflags,
++                cppflags => $cppflags,
++                bn_ops   => $bn_ops,
++            };
++        }
++
++        return $ohos_sdk;
++    }
++}
++
++my %targets = (
++    "ohos" => {
++        inherit_from            => [ "linux-generic64" ],
++        template                => 1,
++        cflags                  => add(sub { ohos_sdk()->{cflags} }),
++        cppflags                => add(sub { ohos_sdk()->{cppflags} }),
++        cxxflags                => add(sub { ohos_sdk()->{cflags} }),
++        bn_ops                  => sub { ohos_sdk()->{bn_ops} },
++        shared_extension        => ".so",
++        shared_extension_simple => ".so",
++        enable                  => [ ],
++    },
++    "ohos-arm64" => {
++        inherit_from     => [ "ohos", asm("aarch64_asm") ],
++        perlasm_scheme   => "linux64",
++    },
++    "ohos-x86_64" => {
++        inherit_from     => [ "ohos", asm("x86_64_asm") ],
++        bn_ops           => add("RC4_INT"),
++        perlasm_scheme   => "elf",
++    },
++);
+diff --git a/include/internal/cryptlib.h b/include/internal/cryptlib.h
+index 864d59f..34872ea 100644
+--- a/include/internal/cryptlib.h
++++ b/include/internal/cryptlib.h
+@@ -57,6 +57,8 @@ DEFINE_LHASH_OF(MEM);
+ #  define X509_CERT_AREA          OPENSSLDIR
+ #if defined(__ANDROID__)
+ #  define X509_CERT_DIR           OPENSSLDIR "/cacerts"
++#elif defined(__OHOS__)
++#  define X509_CERT_DIR           OPENSSLDIR "/certificates"
+ #else
+ #  define X509_CERT_DIR           OPENSSLDIR "/certs"
+ #endif
+-- 
+2.48.1
+

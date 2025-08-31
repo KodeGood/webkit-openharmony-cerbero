@@ -40,6 +40,8 @@ class Recipe(recipe.Recipe):
         dependency_libs = []
         if self.config.target_platform == Platform.ANDROID:
             dependency_libs += ['-lm', '-llog']
+        elif self.config.target_platform == Platform.OHOS:
+            dependency_libs += ['-lm']
 
         lib = LibtoolLibrary('orc-0.4', None, None, None, self.config.libdir,
                 self.config.target_platform, deps=dependency_libs)

@@ -14,3 +14,7 @@ class Recipe(recipe.Recipe):
                    'lib/xsltConf.sh',
                    'lib/pkgconfig/libexslt.pc', 'lib/pkgconfig/libxslt.pc']
 
+    def prepare(self):
+        if self.config.target_platform == Platform.OHOS:
+            self.autoreconf = True
+ 

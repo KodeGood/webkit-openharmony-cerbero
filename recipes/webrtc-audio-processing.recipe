@@ -19,6 +19,7 @@ class Recipe(recipe.Recipe):
         # https://gitlab.freedesktop.org/pulseaudio/webrtc-audio-processing/-/merge_requests/40
         'webrtc-audio-processing/0001-build-Appease-MSYS2-UCRT64-GCC-13.patch',
         'webrtc-audio-processing/0002-file_wrapper.h-Fix-build-with-GCC13.patch',
+        'webrtc-audio-processing/0003-Add-OHOS-support.patch'
     ]
 
     files_libs = [

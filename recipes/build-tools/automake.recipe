@@ -3,14 +3,14 @@
 
 class Recipe(recipe.Recipe):
     name = 'automake'
-    version = '1.15.1'
+    version = '1.16.5'
     licenses = [License.GPLv2Plus]
     stype = SourceType.TARBALL
     url = 'gnu://'
-    tarball_checksum = 'af6ba39142220687c500f79b4aa2f181d9b24e4f8d8ec497cea4ba26c64bedaf'
+    tarball_checksum = 'f01d58cd6d9d77fbdca9eb4bbd5ead1988228fdb73d6f7a201f5f8d6b118b469'
     deps = ['autoconf', 'gettext-m4']
     use_msys_perl = True
 
     files_bin = ['bin/automake', 'bin/aclocal',
-                 'bin/automake-1.15', 'bin/aclocal-1.15']
-    files_share = ['share/aclocal-1.15', 'share/automake-1.15']
+                 'bin/automake-1.16', 'bin/aclocal-1.16']
+    files_share = ['share/aclocal-1.16', 'share/automake-1.16']

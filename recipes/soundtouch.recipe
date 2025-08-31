@@ -21,12 +21,12 @@ class Recipe(recipe.Recipe):
     files_devel = ['include/soundtouch', '%(libdir)s/pkgconfig/soundtouch.pc']
 
     def prepare (self):
-      if self.config.target_platform == Platform.ANDROID:
+      if self.config.target_platform in (Platform.ANDROID, Platform.OHOS):
         self.append_env('CXXFLAGS', '-fexceptions -DST_NO_EXCEPTION_HANDLING')
 
     def post_install (self):
         dependency_libs = []
-        if self.config.target_platform == Platform.ANDROID:
+        if self.config.target_platform in [Platform.ANDROID, Platform.OHOS]:
             dependency_libs += ['-lm']
 
         lib = LibtoolLibrary('SoundTouch', None, None, None, self.config.libdir,

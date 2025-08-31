@@ -18,7 +18,7 @@ class Recipe(recipe.Recipe):
             # zbar incorrectly passes CPPFLAGS to WINDRES, which then barfs on
             # args it can't understand
             self.set_env('CPPFLAGS', '')
-        if self.config.target_platform in [Platform.IOS, Platform.DARWIN]:
+        if self.config.target_platform in [Platform.IOS, Platform.DARWIN, Platform.OHOS]:
             self.autoreconf = True
         # since MacOS 14.0 (sonoma), we can't seem to successfully find the iconv library so add it manually
         if self.config.target_platform in [Platform.DARWIN]:
@@ -29,3 +29,6 @@ class Recipe(recipe.Recipe):
                 self.append_env('LDFLAGS', '-lc')
             else:
                 self.deps.append('libiconv')
+        if self.config.target_platform == Platform.OHOS:
+            self.append_env('LDFLAGS', '-lc')
+

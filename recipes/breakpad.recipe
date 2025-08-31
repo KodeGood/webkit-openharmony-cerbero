@@ -1,0 +1,99 @@
+# -*- Mode: Python -*- vi:si:et:sw=4:sts=4:ts=4:syntax=python
+import os
+import shutil
+
+import cerbero.utils.messages as m
+from cerbero.errors import FatalError
+from cerbero.utils import shell
+
+
+class Recipe(recipe.Recipe):
+    name = 'breakpad'
+    version = 'v2024.02.16'
+    stype = SourceType.GIT
+    remotes = {'origin': 'https://chromium.googlesource.com/breakpad/breakpad.git'}
+    commit = '85e647e1feb9599427a8fb1e3cd563de44d76557'
+
+    configure_options = '--disable-processor --disable-tools'
+
+    patches = [
+        'breakpad/0001-Downgrade-autoconf-requirement.patch'
+    ]
+
+    files_libs = ['libbreakpad_client']
+    files_devel = [
+        'include/breakpad',
+        'lib/pkgconfig/breakpad_client.pc'
+    ]
+
+    gclient_deps = {
+        'googletest': {
+            'url': 'https://github.com/google/googletest.git',
+            'ref': 'v1.16.0',
+            'dest': 'src/src/testing',
+        },
+        'protobuf': {
+            'url': 'https://github.com/google/protobuf.git',
+            'ref': 'cb6dd4ef5f82e41e06179dcd57d3b1d9246ad6ac',
+            'dest': 'src/src/third_party/protobuf/protobuf',
+        },
+        'linux-syscall-support': {
+            'url': 'https://chromium.googlesource.com/linux-syscall-support/',
+            'ref': '29164a80da4d41134950d76d55199ea33fbb9613',
+            'dest': 'src/src/third_party/lss',
+        },
+    }
+
+    async def extract(self):
+        await super().extract()
+        await self._populate_dependencies()
+
+    def prepare(self):
+        if self.config.target_platform == Platform.OHOS:
+            self.autoreconf = True
+            self.append_env('CXXFLAGS', '-Wno-error=sign-compare')
+
+    def _deps_cache_dir(self):
+        return os.path.join(self.repo_dir, '_deps')
+
+    async def _populate_dependencies(self):
+        deps_cache = self._deps_cache_dir()
+        os.makedirs(deps_cache, exist_ok=True)
+        logfile = getattr(self, 'logfile', None)
+        for name, dep in self.gclient_deps.items():
+            cache_dir = os.path.join(deps_cache, name)
+            await self._ensure_dependency_checkout(name, dep, cache_dir, logfile)
+            dest_dir = self._resolve_dep_dest(dep['dest'])
+            if os.path.exists(dest_dir):
+                shutil.rmtree(dest_dir)
+            os.makedirs(os.path.dirname(dest_dir), exist_ok=True)
+            m.action(f'Copying {name} sources into {dest_dir}', logfile=logfile)
+            shutil.copytree(cache_dir, dest_dir,
+                           ignore=shutil.ignore_patterns('.git'))
+
+    async def _ensure_dependency_checkout(self, name, dep, cache_dir, logfile):
+        if not os.path.exists(cache_dir):
+            if self.offline:
+                raise FatalError(f'Required dependency {name} is not cached and network access is disabled')
+            m.action(f'Cloning {name} dependency from {dep["url"]}', logfile=logfile)
+            os.makedirs(os.path.dirname(cache_dir), exist_ok=True)
+            await shell.async_call(['git', 'clone', dep['url'], cache_dir],
+                                   cmd_dir=os.path.dirname(cache_dir),
+                                   logfile=logfile, cpu_bound=False)
+        elif not self.offline:
+            m.action(f'Updating cached {name} repository', logfile=logfile)
+            await shell.async_call(['git', 'fetch', '--force', '--tags'],
+                                   cmd_dir=cache_dir, logfile=logfile, cpu_bound=False)
+
+        await shell.async_call(['git', 'checkout', '--force', dep['ref']],
+                               cmd_dir=cache_dir, logfile=logfile, cpu_bound=False)
+        await shell.async_call(['git', 'clean', '-fdx'],
+                               cmd_dir=cache_dir, logfile=logfile, cpu_bound=False)
+
+    def _resolve_dep_dest(self, dep_path):
+        parts = dep_path.split('/') if dep_path else []
+        if parts and parts[0] == 'src':
+            parts = parts[1:]
+        if not parts:
+            return self.config_src_dir
+        return os.path.join(self.config_src_dir, *parts)

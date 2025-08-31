@@ -58,7 +58,8 @@ class Recipe(recipe.Recipe):
         # https://gitlab.gnome.org/GNOME/glib/-/merge_requests/3237
         # backported into 2.74.6
         'glib/0001-Fix-safe_wspawnve-define.patch',
-        'glib/0009-Fix-GIO-module-load-paths.patch'
+        'glib/0009-Fix-GIO-module-load-paths.patch',
+        'glib/0001-Add-OHOS-support.patch'
     ]
 
     files_libs = [
@@ -97,6 +98,7 @@ class Recipe(recipe.Recipe):
         Platform.ANDROID: ['%(libdir)s/pkgconfig/gio-unix-2.0.pc', 'include/gio-unix-2.0'],
         Platform.DARWIN: ['%(libdir)s/pkgconfig/gio-unix-2.0.pc', 'include/gio-unix-2.0'],
         Platform.IOS: ['%(libdir)s/pkgconfig/gio-unix-2.0.pc', 'include/gio-unix-2.0'],
+        Platform.OHOS: ['%(libdir)s/pkgconfig/gio-unix-2.0.pc', 'include/gio-unix-2.0']
     }
 
     files_lang = ['glib20']
@@ -152,6 +154,9 @@ class Recipe(recipe.Recipe):
                 self.meson_options.update({'iconv': 'libc'})
             else:
                 self.deps.append('libiconv')
+
+        if self.config.target_platform == Platform.OHOS:
+            self.meson_options.update({'iconv': 'libc'})
 
         if self.config.target_platform == Platform.WINDOWS:
             # Want secure versions of stdlib functions. Glib already defines

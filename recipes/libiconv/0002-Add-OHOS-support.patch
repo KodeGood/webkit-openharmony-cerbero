@@ -1,0 +1,93 @@
+From e02153afb37b52d3dddd1685a38c2ea58335e0fb Mon Sep 17 00:00:00 2001
+From: Jani Hautakangas <jani@kodegood.com>
+Date: Tue, 7 Jan 2025 14:15:00 +0300
+Subject: [PATCH] Add OHOS support
+
+---
+ build-aux/config.sub            | 2 +-
+ lib/Makefile.in                 | 4 ++--
+ libcharset/build-aux/config.sub | 2 +-
+ libcharset/lib/Makefile.in      | 4 ++--
+ 4 files changed, 6 insertions(+), 6 deletions(-)
+
+diff --git a/build-aux/config.sub b/build-aux/config.sub
+index a44fd8a..a56e9c5 100755
+--- a/build-aux/config.sub
++++ b/build-aux/config.sub
+@@ -132,7 +132,7 @@ case $1 in
+ 		maybe_os=$field2-$field3
+ 		case $maybe_os in
+ 			nto-qnx* | linux-gnu* | linux-android* | linux-dietlibc \
+-			| linux-newlib* | linux-musl* | linux-uclibc* | uclinux-uclibc* \
++			| linux-newlib* | linux-musl* | linux-uclibc* | linux-ohos* | uclinux-uclibc* \
+ 			| uclinux-gnu* | kfreebsd*-gnu* | knetbsd*-gnu* | netbsd*-gnu* \
+ 			| netbsd*-eabi* | kopensolaris*-gnu* | cloudabi*-eabi* \
+ 			| storm-chaos* | os2-emx* | rtmk-nova*)
+diff --git a/lib/Makefile.in b/lib/Makefile.in
+index 8decfd0..92c7d76 100644
+--- a/lib/Makefile.in
++++ b/lib/Makefile.in
+@@ -52,6 +52,7 @@ SHELL = @SHELL@
+ # Before making a release, change this according to the libtool documentation,
+ # section "Library interface versions".
+ LIBICONV_VERSION_INFO = 8:1:6
++LIBICONV_VERSION_ARG ?= -version-info $(LIBICONV_VERSION_INFO)
+ 
+ PACKAGE_VERSION = @VERSION@
+ 
+@@ -69,7 +70,7 @@ OBJECTS_RES_no =
+ all : libiconv.la
+ 
+ libiconv.la : $(OBJECTS)
+-	$(LIBTOOL_LINK) $(CC) $(LDFLAGS) $(CFLAGS) -o libiconv.la -rpath $(libdir) -version-info $(LIBICONV_VERSION_INFO) -no-undefined $(OBJECTS)
++	$(LIBTOOL_LINK) $(CC) $(LDFLAGS) $(CFLAGS) -o libiconv.la -rpath $(libdir) $(LIBICONV_VERSION_ARG) -no-undefined $(OBJECTS)
+ 
+ iconv.lo : $(srcdir)/iconv.c $(srcdir)/converters.h \
+            $(srcdir)/encodings.def $(srcdir)/encodings_aix.def $(srcdir)/encodings_osf1.def $(srcdir)/encodings_dos.def $(srcdir)/encodings_local.def \
+@@ -370,4 +371,3 @@ distdir : $(DISTFILES)
+ 	done
+ 
+ force :
+-
+diff --git a/libcharset/build-aux/config.sub b/libcharset/build-aux/config.sub
+index a44fd8a..a56e9c5 100755
+--- a/libcharset/build-aux/config.sub
++++ b/libcharset/build-aux/config.sub
+@@ -132,7 +132,7 @@ case $1 in
+ 		maybe_os=$field2-$field3
+ 		case $maybe_os in
+ 			nto-qnx* | linux-gnu* | linux-android* | linux-dietlibc \
+-			| linux-newlib* | linux-musl* | linux-uclibc* | uclinux-uclibc* \
++			| linux-newlib* | linux-musl* | linux-uclibc* | linux-ohos* | uclinux-uclibc* \
+ 			| uclinux-gnu* | kfreebsd*-gnu* | knetbsd*-gnu* | netbsd*-gnu* \
+ 			| netbsd*-eabi* | kopensolaris*-gnu* | cloudabi*-eabi* \
+ 			| storm-chaos* | os2-emx* | rtmk-nova*)
+diff --git a/libcharset/lib/Makefile.in b/libcharset/lib/Makefile.in
+index df77df4..64c6c7f 100644
+--- a/libcharset/lib/Makefile.in
++++ b/libcharset/lib/Makefile.in
+@@ -41,6 +41,7 @@ SHELL = @SHELL@
+ # Before making a release, change this according to the libtool documentation,
+ # section "Library interface versions".
+ LIBCHARSET_VERSION_INFO = 1:0:0
++LIBCHARSET_VERSION_ARG ?= -version-info $(LIBCHARSET_VERSION_INFO)
+ 
+ # Needed by $(LIBTOOL).
+ top_builddir = ..
+@@ -52,7 +53,7 @@ OBJECTS = localcharset.lo relocatable-stub.lo
+ all : libcharset.la
+ 
+ libcharset.la : $(OBJECTS)
+-	$(LIBTOOL_LINK) $(CC) $(LDFLAGS) $(CFLAGS) -o libcharset.la -rpath $(libdir) -version-info $(LIBCHARSET_VERSION_INFO) -no-undefined $(OBJECTS)
++	$(LIBTOOL_LINK) $(CC) $(LDFLAGS) $(CFLAGS) -o libcharset.la -rpath $(libdir) $(LIBCHARSET_VERSION_ARG) -no-undefined $(OBJECTS)
+ 
+ localcharset.lo : $(srcdir)/localcharset.c
+ 	$(LIBTOOL_COMPILE) $(CC) $(INCLUDES) $(CFLAGS) $(CPPFLAGS) $(DEFS) -c $(srcdir)/localcharset.c
+@@ -121,4 +122,3 @@ distdir : $(DISTFILES)
+ 	done
+ 
+ force :
+-
+-- 
+2.48.1
+

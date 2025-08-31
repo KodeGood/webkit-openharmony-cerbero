@@ -1,5 +1,6 @@
 # -*- Mode: Python -*- vi:si:et:sw=4:sts=4:ts=4:syntax=python
 from cerbero.tools.libtool import LibtoolLibrary
+from cerbero.errors import FatalError
 
 
 class Recipe(recipe.Recipe):
@@ -23,6 +24,7 @@ class Recipe(recipe.Recipe):
         name + '/0005-Fix-debug-build.patch',
         name + '/0006-Add-license-for-vcpkg-changes.patch',
         name + '/0007-Make-libdir-configurable.patch',
+        name + '/0008-Add-OHOS-support.patch',
     ]
     # openssl on Linux
     use_system_libs = True
@@ -38,16 +40,21 @@ class Recipe(recipe.Recipe):
             system = 'mingw'
         elif self.config.target_platform in [Platform.DARWIN, Platform.IOS]:
             system = 'darwin'
-        elif self.config.target_platform in [Platform.LINUX, Platform.ANDROID]:
+        elif self.config.target_platform in [Platform.LINUX, Platform.ANDROID, Platform.OHOS]:
             system = 'posix'
+        else:
+            raise FatalError(f'Unsupported platform {self.config.target_platform} for librtmp')
         # LDFLAGS are passed via XLDFLAGS, and are needed for at least Android
         cc = self.get_env('CC')
         ld = self.get_env('LD')
         prefix = self.config.prefix
         cflags = self.get_env('CFLAGS')
         ldflags = self.get_env('LDFLAGS')
-        self.make += ['SYS=' + system, 'prefix=' + prefix, 'CRYPTO=OPENSSL', 'XCFLAGS=' + cflags,
+        make_args = ['SYS=' + system, 'prefix=' + prefix, 'CRYPTO=OPENSSL', 'XCFLAGS=' + cflags,
                       'XLDFLAGS=' + ldflags, 'CC=' + cc, 'LD=' + ld, 'libdir=' + self.config.libdir]
+        if self.config.target_platform == Platform.OHOS:
+            make_args.append('SO_VERSION=')
+        self.make += make_args
         self.make_install = self.make + ['install']
 
     def post_install(self):

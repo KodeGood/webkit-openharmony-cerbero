@@ -1,0 +1,272 @@
+From e823e6fad408335d139f67da295064c10b7dd48a Mon Sep 17 00:00:00 2001
+From: Jani Hautakangas <jani@kodegood.com>
+Date: Thu, 9 Oct 2025 23:50:21 +0300
+Subject: [PATCH 10/10] Log messages to the HiLog
+
+---
+ Source/JavaScriptCore/jsc.cpp       |  2 +-
+ Source/WTF/wtf/Assertions.cpp       | 13 +++++++-
+ Source/WTF/wtf/Assertions.h         | 40 +++++++++++++++++++++--
+ Source/WTF/wtf/Logger.h             | 10 +++++-
+ Source/WTF/wtf/WTFConfig.h          |  2 +-
+ Source/WTF/wtf/ohos/LoggingOHOS.cpp | 49 +++++++++++++++++++++++++++++
+ Source/WTF/wtf/unix/LoggingUnix.cpp |  4 +--
+ 7 files changed, 111 insertions(+), 9 deletions(-)
+
+diff --git a/Source/JavaScriptCore/jsc.cpp b/Source/JavaScriptCore/jsc.cpp
+index f0ea3f3f8600..473c3747af3d 100644
+--- a/Source/JavaScriptCore/jsc.cpp
++++ b/Source/JavaScriptCore/jsc.cpp
+@@ -3609,7 +3609,7 @@ int main(int argc, char** argv)
+     // yet, since that would do somethings that we'd like to defer until after we
+     // have a chance to parse options.
+     WTF::initialize();
+-#if PLATFORM(COCOA) || OS(ANDROID)
++#if PLATFORM(COCOA) || OS(ANDROID) || OS(OHOS)
+     WTF::disableForwardingVPrintfStdErrToOSLog();
+ #endif
+ 
+diff --git a/Source/WTF/wtf/Assertions.cpp b/Source/WTF/wtf/Assertions.cpp
+index 80ac03a9ad73..a56d2114f496 100644
+--- a/Source/WTF/wtf/Assertions.cpp
++++ b/Source/WTF/wtf/Assertions.cpp
+@@ -117,7 +117,7 @@ ALLOW_NONLITERAL_FORMAT_END
+     return StringImpl::create(buffer.subspan(0, buffer.size() - 1));
+ }
+ 
+-#if PLATFORM(COCOA) || OS(ANDROID)
++#if PLATFORM(COCOA) || OS(ANDROID) || OS(OHOS)
+ void disableForwardingVPrintfStdErrToOSLog()
+ {
+     g_wtfConfig.disableForwardingVPrintfStdErrToOSLog = true;
+@@ -146,6 +146,8 @@ static void logToStderr([[maybe_unused]] WTFLogChannel* channel, const char* buf
+     os_log(channel ? channel->osLogChannel : webkitSubsystemForGenericOSLog(), "%s", buffer);
+ #elif OS(ANDROID)
+     __android_log_write(ANDROID_LOG_VERBOSE, LOG_CHANNEL_WEBKIT_SUBSYSTEM, buffer);
++#elif OS(OHOS)
++    OH_LOG_PrintMsg(LOG_APP, LOG_INFO, WEBKIT_LOG_DOMAIN, LOG_CHANNEL_WEBKIT_SUBSYSTEM, buffer);
+ #endif
+     fputs(buffer, stderr);
+ }
+@@ -189,6 +191,15 @@ ALLOW_NONLITERAL_FORMAT_END
+     }
+ #endif
+ 
++#if OS(OHOS)
++    if (!g_wtfConfig.disableForwardingVPrintfStdErrToOSLog) {
++        va_list copyOfArgs;
++        va_copy(copyOfArgs, args);
++        OH_LOG_VPrint(LOG_APP, LOG_ERROR, WEBKIT_LOG_DOMAIN, LOG_CHANNEL_WEBKIT_SUBSYSTEM, format, copyOfArgs);
++        va_end(copyOfArgs);
++    }
++#endif
++
+     // Fall through to write to stderr in the same manner as other platforms.
+ 
+ #elif HAVE(ISDEBUGGERPRESENT)
+diff --git a/Source/WTF/wtf/Assertions.h b/Source/WTF/wtf/Assertions.h
+index 042d069a590c..fd810857eaa4 100644
+--- a/Source/WTF/wtf/Assertions.h
++++ b/Source/WTF/wtf/Assertions.h
+@@ -55,6 +55,10 @@
+ #include <wtf/spi/darwin/ReasonSPI.h>
+ #endif
+ 
++#if OS(OHOS)
++#include <hilog/log.h>
++#endif
++
+ #if USE(OS_LOG)
+ #include <os/log.h>
+ #endif
+@@ -102,11 +106,11 @@
+ #if ENABLE(RELEASE_LOG)
+ #define RELEASE_LOG_DISABLED 0
+ #else
+-#define RELEASE_LOG_DISABLED !(USE(OS_LOG) || ENABLE(JOURNALD_LOG) || OS(ANDROID))
++#define RELEASE_LOG_DISABLED !(USE(OS_LOG) || ENABLE(JOURNALD_LOG) || OS(ANDROID) || OS(OHOS))
+ #endif
+ 
+ #ifndef VERBOSE_RELEASE_LOG
+-#define VERBOSE_RELEASE_LOG (ENABLE(JOURNALD_LOG) || OS(ANDROID))
++#define VERBOSE_RELEASE_LOG (ENABLE(JOURNALD_LOG) || OS(ANDROID) || OS(OHOS))
+ #endif
+ 
+ #define WTF_PRETTY_FUNCTION __PRETTY_FUNCTION__
+@@ -736,6 +740,36 @@ static constexpr bool unreachableForValue = false;
+         LOG_ANDROID_SEND(channel, VERBOSE, __VA_ARGS__); \
+ } while (0)
+ 
++#elif OS(OHOS)
++
++#define WEBKIT_LOG_DOMAIN 0xD9C7
++
++#define PUBLIC_LOG_STRING "{public}s"
++#define PRIVATE_LOG_STRING "{private}s"
++#define SENSITIVE_LOG_STRING "{private}s"
++
++#define LOG_OHOS_SEND(channel, priority, fmt, ...) do { \
++    auto& logChannel = LOG_CHANNEL(channel); \
++    if (logChannel.state != WTFLogChannelState::Off) \
++        OH_LOG_Print(LOG_APP, LOG_ ## priority, WEBKIT_LOG_DOMAIN, LOG_CHANNEL_WEBKIT_SUBSYSTEM, "[%s] " fmt, logChannel.name, ##__VA_ARGS__); \
++} while (0)
++
++#define RELEASE_LOG(channel, ...) LOG_OHOS_SEND(channel, INFO, __VA_ARGS__)
++#define RELEASE_LOG_ERROR(channel, ...) LOG_OHOS_SEND(channel, ERROR, __VA_ARGS__)
++#define RELEASE_LOG_FAULT(channel, ...) LOG_OHOS_SEND(channel, FATAL, __VA_ARGS__)
++#define RELEASE_LOG_INFO(channel, ...) LOG_OHOS_SEND(channel, INFO, __VA_ARGS__)
++#define RELEASE_LOG_DEBUG(channel, ...) LOG_OHOS_SEND(channel, DEBUG, __VA_ARGS__)
++
++#define RELEASE_LOG_WITH_LEVEL(channel, logLevel, ...) do { \
++    if (LOG_CHANNEL(channel).level >= (logLevel)) \
++        LOG_OHOS_SEND(channel, VERBOSE, __VA_ARGS__); \
++} while (0)
++
++#define RELEASE_LOG_WITH_LEVEL_IF(isAllowed, channel, logLevel, ...) do { \
++    if ((isAllowed) && LOG_CHANNEL(channel).level >= (logLevel)) \
++        LOG_OHOS_SEND(channel, VERBOSE, __VA_ARGS__); \
++} while (0)
++
+ #elif ENABLE(JOURNALD_LOG)
+ 
+ #define PUBLIC_LOG_STRING "s"
+@@ -984,7 +1018,7 @@ void isIntegralOrPointerType(T, Types... types)
+     isIntegralOrPointerType(types...);
+ }
+ 
+-#if PLATFORM(COCOA) || OS(ANDROID)
++#if PLATFORM(COCOA) || OS(ANDROID) || OS(OHOS)
+ WTF_EXPORT_PRIVATE void disableForwardingVPrintfStdErrToOSLog();
+ #endif
+ 
+diff --git a/Source/WTF/wtf/Logger.h b/Source/WTF/wtf/Logger.h
+index 29e840f2df50..3e56e3641608 100644
+--- a/Source/WTF/wtf/Logger.h
++++ b/Source/WTF/wtf/Logger.h
+@@ -40,6 +40,10 @@
+ #include <android/log.h>
+ #endif
+ 
++#if OS(OHOS)
++#include <hilog/log.h>
++#endif
++
+ namespace WTF {
+ 
+ template<typename T>
+@@ -273,7 +277,7 @@ public:
+         if (!m_enabled)
+             return false;
+ 
+-#if ENABLE(JOURNALD_LOG) || OS(ANDROID)
++#if ENABLE(JOURNALD_LOG) || OS(ANDROID) || OS(OHOS)
+         if (channel.state == WTFLogChannelState::Off)
+             return false;
+ #endif
+@@ -362,6 +366,8 @@ private:
+         SUPPRESS_UNRETAINED_LOCAL os_log(channel.osLogChannel, "%{public}s", logMessage.utf8().data());
+ #elif OS(ANDROID)
+         __android_log_print(ANDROID_LOG_VERBOSE, LOG_CHANNEL_WEBKIT_SUBSYSTEM, "[%s] %s", channel.name, logMessage.utf8().data());
++#elif OS(OHOS)
++        OH_LOG_Print(LOG_APP, LOG_INFO, WEBKIT_LOG_DOMAIN, LOG_CHANNEL_WEBKIT_SUBSYSTEM, "[%s] %s", channel.name, logMessage.utf8().data());
+ #elif ENABLE(JOURNALD_LOG)
+         sd_journal_send("WEBKIT_SUBSYSTEM=" LOG_CHANNEL_WEBKIT_SUBSYSTEM, "WEBKIT_CHANNEL=%s", channel.name, "MESSAGE=%s", logMessage.utf8().data(), nullptr);
+ #else
+@@ -393,6 +399,8 @@ private:
+         UNUSED_PARAM(function);
+ #elif OS(ANDROID)
+         __android_log_print(ANDROID_LOG_VERBOSE, LOG_CHANNEL_WEBKIT_SUBSYSTEM, "[%s] %s FILE=%s:%d: %s", channel.name, logMessage.utf8().data(), file, line, function);
++#elif OS(OHOS)
++        OH_LOG_Print(LOG_APP, LOG_INFO, WEBKIT_LOG_DOMAIN, LOG_CHANNEL_WEBKIT_SUBSYSTEM, "[%s] %s FILE=%s:%d: %s", channel.name, logMessage.utf8().data(), file, line, function);
+ #elif ENABLE(JOURNALD_LOG)
+         auto fileString = makeString("CODE_FILE="_s, unsafeSpan(file));
+         auto lineString = makeString("CODE_LINE="_s, line);
+diff --git a/Source/WTF/wtf/WTFConfig.h b/Source/WTF/wtf/WTFConfig.h
+index fa1cc99694b8..549ce36b3051 100644
+--- a/Source/WTF/wtf/WTFConfig.h
++++ b/Source/WTF/wtf/WTFConfig.h
+@@ -91,7 +91,7 @@ struct Config {
+     bool isPermanentlyFrozen;
+     bool disabledFreezingForTesting;
+     bool useSpecialAbortForExtraSecurityImplications;
+-#if PLATFORM(COCOA) || OS(ANDROID)
++#if PLATFORM(COCOA) || OS(ANDROID) || OS(OHOS)
+     bool disableForwardingVPrintfStdErrToOSLog;
+ #endif
+ 
+diff --git a/Source/WTF/wtf/ohos/LoggingOHOS.cpp b/Source/WTF/wtf/ohos/LoggingOHOS.cpp
+index e69de29bb2d1..172bbd45fc62 100644
+--- a/Source/WTF/wtf/ohos/LoggingOHOS.cpp
++++ b/Source/WTF/wtf/ohos/LoggingOHOS.cpp
+@@ -0,0 +1,49 @@
++/*
++ * Copyright (C) 2025 Jani Hautakangas <jani@kodegood.com>
++ *
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Library General Public
++ * License as published by the Free Software Foundation; either
++ * version 2 of the License, or (at your option) any later version.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Library General Public License for more details.
++ *
++ * You should have received a copy of the GNU Library General Public License
++ * along with this library; see the file COPYING.LIB.  If not, write to
++ * the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
++ * Boston, MA 02110-1301, USA.
++ */
++
++#include "config.h"
++
++#if OS(OHOS)
++#include "Logging.h"
++
++#if !LOG_DISABLED || !RELEASE_LOG_DISABLED
++
++#include <wtf/text/MakeString.h>
++#include <wtf/text/WTFString.h>
++
++namespace WTF {
++
++String logLevelString()
++{
++    const char* propertyValue = nullptr;
++
++    // TODO: Replace with OHOS equivalent when available.
++
++    // Disable all log channels if the property is unset or empty.
++    if (!propertyValue || !*propertyValue)
++        return makeString("-all"_s);
++
++    return String::fromLatin1(propertyValue);
++}
++
++} // namespace WTF
++
++#endif // !LOG_DISABLED || !RELEASE_LOG_DISABLED
++
++#endif // OS(ANDROID)
+diff --git a/Source/WTF/wtf/unix/LoggingUnix.cpp b/Source/WTF/wtf/unix/LoggingUnix.cpp
+index bb5575ea0655..054ce40c705c 100644
+--- a/Source/WTF/wtf/unix/LoggingUnix.cpp
++++ b/Source/WTF/wtf/unix/LoggingUnix.cpp
+@@ -21,7 +21,7 @@
+ 
+ #include "config.h"
+ 
+-#if !OS(ANDROID)
++#if !OS(ANDROID) && !OS(OHOS)
+ 
+ #include "Logging.h"
+ 
+@@ -53,4 +53,4 @@ String logLevelString()
+ 
+ #endif // !LOG_DISABLED || !RELEASE_LOG_DISABLED
+ 
+-#endif // !OS(ANDROID)
++#endif // !OS(ANDROID) && !OS(OHOS)
+-- 
+2.48.1
+

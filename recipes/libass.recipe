@@ -28,3 +28,8 @@ class Recipe(recipe.Recipe):
                 self.deps.append('libiconv')
             if self.config.target_arch in (Architecture.X86,):
                 self.configure_options += ' --disable-asm'
+        if self.config.target_platform == Platform.OHOS:
+            self.autoreconf = True
+            self.append_env('LDFLAGS', '-lc')
+            if self.config.target_arch in (Architecture.X86,):
+                self.configure_options += ' --disable-asm'

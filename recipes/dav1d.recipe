@@ -18,6 +18,8 @@ class Recipe(recipe.Recipe):
         'enable_tests': 'false',
     }
 
+    patches = ['dav1d/0001-Add-OHOS-support.patch']
+
     files_libs = ['libdav1d']
     files_devel = ['include/dav1d', '%(libdir)s/pkgconfig/dav1d.pc']
 

@@ -1,0 +1,106 @@
+From 41f812adb910cffc9ef9a0e87703b93d589dbda0 Mon Sep 17 00:00:00 2001
+From: Jani Hautakangas <jani@kodegood.com>
+Date: Mon, 8 Sep 2025 20:03:06 +0000
+Subject: [PATCH 07/10] Fix dependent-type qualifiers
+
+Clang on OHOS requires `typename` before nested types that depend on a
+template parameter. Add `typename` to satisfy the standard and fix
+build errors like:
+
+  error: missing 'typename' prior to dependent type name 'RegisterBank::Register'
+---
+ Source/JavaScriptCore/jit/SimpleRegisterAllocator.h       | 8 ++++----
+ .../CSSPropertyParserConsumer+CSSPrimitiveValueResolver.h | 4 ++--
+ Source/WebCore/rendering/RenderFlexibleBox.cpp            | 6 +++---
+ .../primitives/StylePrimitiveNumericTypes+Platform.h      | 6 +++---
+ 4 files changed, 12 insertions(+), 12 deletions(-)
+
+diff --git a/Source/JavaScriptCore/jit/SimpleRegisterAllocator.h b/Source/JavaScriptCore/jit/SimpleRegisterAllocator.h
+index e95b38b54cde..4fc9dad9bc57 100644
+--- a/Source/JavaScriptCore/jit/SimpleRegisterAllocator.h
++++ b/Source/JavaScriptCore/jit/SimpleRegisterAllocator.h
+@@ -46,16 +46,16 @@ class SimpleRegisterAllocator {
+     WTF_MAKE_NONCOPYABLE(SimpleRegisterAllocator);
+     WTF_FORBID_HEAP_ALLOCATION;
+ public:
+-    using Register = RegisterBank::Register;
++    using Register = typename RegisterBank::Register;
+     static_assert(std::is_same_v<Register, GPRReg> || std::is_same_v<Register, FPRReg>);
+-    using JITBackend = RegisterBank::JITBackend;
++    using JITBackend = typename RegisterBank::JITBackend;
+     static constexpr Register invalidRegister = RegisterBank::invalidRegister;
+     // Usually used by JITBackends to track where:
+     //    1) The type of binding it is (e.g. scratch vs value)
+     //    2) Where this value should be flushed to when spilled.
+-    using RegisterBinding = JITBackend::RegisterBinding;
++    using RegisterBinding = typename JITBackend::RegisterBinding;
+     using RegisterBindings = std::array<RegisterBinding, RegisterBank::numberOfRegisters>;
+-    using SpillHint = JITBackend::SpillHint;
++    using SpillHint = typename JITBackend::SpillHint;
+     static_assert(std::unsigned_integral<SpillHint>);
+     static constexpr SpillHint invalidRegisterHint = std::numeric_limits<SpillHint>::max();
+ 
+diff --git a/Source/WebCore/css/parser/CSSPropertyParserConsumer+CSSPrimitiveValueResolver.h b/Source/WebCore/css/parser/CSSPropertyParserConsumer+CSSPrimitiveValueResolver.h
+index 1860fc7169b2..ea76d302c98f 100644
+--- a/Source/WebCore/css/parser/CSSPropertyParserConsumer+CSSPrimitiveValueResolver.h
++++ b/Source/WebCore/css/parser/CSSPropertyParserConsumer+CSSPrimitiveValueResolver.h
+@@ -68,10 +68,10 @@ struct CSSPrimitiveValueResolverBase {
+             },
+             [&](const CSS::Percentage<pR, T>& value) -> RefPtr<CSSPrimitiveValue> {
+                 return WTF::switchOn(value,
+-                    [&](const CSS::Percentage<pR, T>::Raw& raw) -> RefPtr<CSSPrimitiveValue> {
++                    [&](const typename CSS::Percentage<pR, T>::Raw& raw) -> RefPtr<CSSPrimitiveValue> {
+                         return CSSPrimitiveValue::create(raw.value / 100.0, CSSUnitType::CSS_NUMBER);
+                     },
+-                    [&](const CSS::Percentage<pR, T>::Calc& calc) -> RefPtr<CSSPrimitiveValue> {
++                    [&](const typename CSS::Percentage<pR, T>::Calc& calc) -> RefPtr<CSSPrimitiveValue> {
+                         return resolve(calc, options);
+                     }
+                 );
+diff --git a/Source/WebCore/rendering/RenderFlexibleBox.cpp b/Source/WebCore/rendering/RenderFlexibleBox.cpp
+index 8472987d737e..74190450f8e1 100644
+--- a/Source/WebCore/rendering/RenderFlexibleBox.cpp
++++ b/Source/WebCore/rendering/RenderFlexibleBox.cpp
+@@ -1100,15 +1100,15 @@ template<typename SizeType> LayoutUnit RenderFlexibleBox::computeMainSizeFromAsp
+     // `crossSize` is border-box size if box-sizing is border-box, and content-box otherwise.
+ 
+     auto crossSizeOptional = WTF::switchOn(crossSizeLength,
+-        [&](const SizeType::Fixed& fixedCrossSizeLength) -> std::optional<LayoutUnit> {
++        [&](const typename SizeType::Fixed& fixedCrossSizeLength) -> std::optional<LayoutUnit> {
+             return LayoutUnit(fixedCrossSizeLength.value);
+         },
+-        [&](const SizeType::Percentage& percentageCrossSizeLength) -> std::optional<LayoutUnit> {
++        [&](const typename SizeType::Percentage& percentageCrossSizeLength) -> std::optional<LayoutUnit> {
+             return mainAxisIsFlexItemInlineAxis(flexItem)
+                 ? flexItem.computePercentageLogicalHeight(percentageCrossSizeLength)
+                 : adjustBorderBoxLogicalWidthForBoxSizing(Style::evaluate(percentageCrossSizeLength, contentBoxWidth()));
+         },
+-        [&](const SizeType::Calc& calcCrossSizeLength) -> std::optional<LayoutUnit> {
++        [&](const typename SizeType::Calc& calcCrossSizeLength) -> std::optional<LayoutUnit> {
+             return mainAxisIsFlexItemInlineAxis(flexItem)
+                 ? flexItem.computePercentageLogicalHeight(calcCrossSizeLength)
+                 : adjustBorderBoxLogicalWidthForBoxSizing(Style::evaluate(calcCrossSizeLength, contentBoxWidth()));
+diff --git a/Source/WebCore/style/values/primitives/StylePrimitiveNumericTypes+Platform.h b/Source/WebCore/style/values/primitives/StylePrimitiveNumericTypes+Platform.h
+index f9fc4d25efba..208415aade83 100644
+--- a/Source/WebCore/style/values/primitives/StylePrimitiveNumericTypes+Platform.h
++++ b/Source/WebCore/style/values/primitives/StylePrimitiveNumericTypes+Platform.h
+@@ -35,13 +35,13 @@ template<auto R> struct ToPlatform<LengthPercentage<R>> {
+     auto operator()(const LengthPercentage<R>& length) -> WebCore::Length
+     {
+         return WTF::switchOn(length,
+-            [](const LengthPercentage<R>::Dimension& dimension) {
++            [](const typename LengthPercentage<R>::Dimension& dimension) {
+                 return WebCore::Length { dimension.value, WebCore::LengthType::Fixed };
+             },
+-            [](const LengthPercentage<R>::Percentage& percentage) {
++            [](const typename LengthPercentage<R>::Percentage& percentage) {
+                 return WebCore::Length { percentage.value, WebCore::LengthType::Percent };
+             },
+-            [](const LengthPercentage<R>::Calc& calc) {
++            [](const typename LengthPercentage<R>::Calc& calc) {
+                 return WebCore::Length { calc.protectedCalculation() };
+             }
+         );
+-- 
+2.48.1
+

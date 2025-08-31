@@ -22,7 +22,8 @@ class Package(custom.GStreamer, package.Package):
         Platform.DARWIN: ['proxy-libintl:libs:lang'],
         Platform.LINUX: [],
         Platform.ANDROID: ['proxy-libintl:libs:lang', 'libiconv:libs:lang'],
-        Platform.IOS: ['proxy-libintl:libs:lang']
+        Platform.IOS: ['proxy-libintl:libs:lang'],
+        Platform.OHOS: ['proxy-libintl:libs:lang', 'libiconv:libs:lang']
         }
 
     def prepare(self):
@@ -36,5 +37,5 @@ class Package(custom.GStreamer, package.Package):
                 'glib:libs:lang:schemas', 'orc:libs', 'bzip2:libs',
                 'json-glib:libs',
             ]
-        elif self.config.target_platform == Platform.ANDROID:
+        elif self.config.target_platform in [Platform.ANDROID, Platform.OHOS]:
             self.files.remove('librsvg:libs')

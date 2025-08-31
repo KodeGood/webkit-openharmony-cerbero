@@ -1,0 +1,31 @@
+From 82c5f10c47d3a17503b669015eb6b55304c664b9 Mon Sep 17 00:00:00 2001
+From: Jani Hautakangas <jani@kodegood.com>
+Date: Sun, 5 Oct 2025 23:16:49 +0300
+Subject: [PATCH 09/10] Create unversioned libWPEWebKit Need the bug URL
+ (OOPS!).
+
+Reviewed by NOBODY (OOPS!).
+
+Explanation of why this fixes the bug (OOPS!).
+
+* Source/WebKit/CMakeLists.txt:
+---
+ Source/WebKit/CMakeLists.txt | 2 --
+ 1 file changed, 2 deletions(-)
+
+diff --git a/Source/WebKit/CMakeLists.txt b/Source/WebKit/CMakeLists.txt
+index dcbda03e1bfc..d733dfdf9b43 100644
+--- a/Source/WebKit/CMakeLists.txt
++++ b/Source/WebKit/CMakeLists.txt
+@@ -1100,8 +1100,6 @@ if ("${PORT}" STREQUAL "Mac")
+ else ()
+     WEBKIT_POPULATE_LIBRARY_VERSION(WEBKIT)
+ 
+-    set_target_properties(WebKit PROPERTIES VERSION ${WEBKIT_VERSION} SOVERSION ${WEBKIT_VERSION_MAJOR})
+-
+     install(TARGETS WebKit WebProcess NetworkProcess
+         LIBRARY DESTINATION "${LIB_INSTALL_DIR}"
+         RUNTIME DESTINATION "${LIBEXEC_INSTALL_DIR}"
+-- 
+2.48.1
+

@@ -1,0 +1,25 @@
+From 4ae0a69289957773f98d7c28b5e95cdd0ef75d10 Mon Sep 17 00:00:00 2001
+From: Jani Hautakangas <jani@kodegood.com>
+Date: Sun, 5 Oct 2025 18:34:16 +0300
+Subject: [PATCH] Add OHOS support
+
+---
+ taglib/CMakeLists.txt | 2 --
+ 1 file changed, 2 deletions(-)
+
+diff --git a/taglib/CMakeLists.txt b/taglib/CMakeLists.txt
+index 67f0b95..12d987b 100644
+--- a/taglib/CMakeLists.txt
++++ b/taglib/CMakeLists.txt
+@@ -344,8 +344,6 @@ if(HAVE_ZLIB AND NOT HAVE_ZLIB_SOURCE)
+ endif()
+ 
+ set_target_properties(tag PROPERTIES
+-  VERSION ${TAGLIB_SOVERSION_MAJOR}.${TAGLIB_SOVERSION_MINOR}.${TAGLIB_SOVERSION_PATCH}
+-  SOVERSION ${TAGLIB_SOVERSION_MAJOR}
+   INSTALL_NAME_DIR ${CMAKE_INSTALL_FULL_LIBDIR}
+   DEFINE_SYMBOL MAKE_TAGLIB_LIB
+   LINK_INTERFACE_LIBRARIES ""
+-- 
+2.48.1
+

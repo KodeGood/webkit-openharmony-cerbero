@@ -11,7 +11,8 @@ class Recipe(recipe.Recipe):
     tarball_checksum = '7c87a8c2c8c0fc9cd5019e402bed4292462d00a718a7cd5f11218153bf28b26f'
     deps = ['m4']
     patches = ['libtool/0001-Add-support-for-weak_framework-linking-on-Darwin.patch',
-               'libtool/0001-support-gcc-toolchain-argument.patch']
+               'libtool/0001-support-gcc-toolchain-argument.patch',
+               'libtool/0001-Add-support-for-OpenHarmony.patch']
 
     files_bin = ['bin/libtool', 'bin/libtoolize']
     files_libs = ['libltdl']
@@ -31,7 +32,18 @@ class Recipe(recipe.Recipe):
         await super(recipe.Recipe, self).extract()
 
     async def configure(self):
+        shell.new_call(
+            r"find . -type f \( -name '*.m4' -o -name '*.am' -o -name '*.ac' -o -name '*.in' -o -name 'configure' \) "
+            r"-exec sed -i 's/1\.15/1.16/g' {} +",
+            self.build_dir
+        )
+        shell.new_call(
+            r"find . -type f -exec touch -d '2020-01-01 00:00:00' {} +",
+            cmd_dir=self.build_dir
+        )
+
         shell.touch(os.path.join(self.build_dir, 'doc', 'libtool.1'))
         shell.touch(os.path.join(self.build_dir, 'doc', 'libtoolize.1'))
+
         await super(recipe.Recipe, self).configure()
 

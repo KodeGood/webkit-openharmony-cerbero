@@ -17,6 +17,8 @@ class Recipe(recipe.Recipe):
     files_libs = ['libexpat']
     files_devel = ['include/expat.h', 'include/expat_external.h', '%(libdir)s/pkgconfig/expat.pc']
 
+    patches = ['expat/0001-Add-OHOS-support.patch']
+    
     def prepare(self):
         # We only want static libs on iOS and Android
         if self.config.target_platform in (Platform.IOS):

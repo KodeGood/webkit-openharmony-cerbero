@@ -1,0 +1,102 @@
+From 17fd8fcac3b77fc1e62ffb73aa3fed07837617f7 Mon Sep 17 00:00:00 2001
+From: Jani Hautakangas <jani@kodegood.com>
+Date: Sun, 5 Oct 2025 14:14:31 +0300
+Subject: [PATCH] Add OHOS support
+
+---
+ configure         | 14 +++++++++++++-
+ meson.build       |  5 +++--
+ meson_options.txt |  1 +
+ 3 files changed, 17 insertions(+), 3 deletions(-)
+
+diff --git a/configure b/configure
+index b6616f0..0b258b5 100755
+--- a/configure
++++ b/configure
+@@ -4433,6 +4433,8 @@ fi
+ set_default target_os
+ if test "$target_os" = android; then
+     cc_default="clang"
++elif test "$target_os" = android; then
++    cc_default="clang"
+ fi
+ 
+ ar_default="${cross_prefix}${ar_default}"
+@@ -5494,6 +5496,15 @@ case $target_os in
+         SLIB_INSTALL_LINKS=
+         SHFLAGS='-shared -Wl,-soname,$(SLIBNAME)'
+         ;;
++    ohos)
++        disable symver
++        enable section_data_rel_ro
++        add_cflags -fPIE
++        add_ldexeflags -fPIE -pie
++        SLIB_INSTALL_NAME='$(SLIBNAME)'
++        SLIB_INSTALL_LINKS=
++        SHFLAGS='-shared -Wl,-soname,$(SLIBNAME)'
++        ;;
+     haiku)
+         prefix_default="/boot/common"
+         network_extralibs="-lnetwork"
+@@ -6016,7 +6027,7 @@ EOF
+     enabled vfpv3   && check_insn vfpv3   'vmov.f32 s0, #1.0'
+     enabled setend  && check_insn setend  'setend be'
+ 
+-    [ $target_os = linux ] || [ $target_os = android ] ||
++    [ $target_os = linux ] || [ $target_os = android ] || [ $target_os = ohos] ||
+         map 'enabled_any ${v}_external ${v}_inline || disable $v' \
+             $ARCH_EXT_LIST_ARM
+ 
+@@ -6382,6 +6393,7 @@ check_lib shell32  "windows.h shellapi.h" CommandLineToArgvW   -lshell32
+ check_lib psapi    "windows.h psapi.h"    GetProcessMemoryInfo -lpsapi
+ 
+ check_lib android android/native_window.h ANativeWindow_acquire -landroid
++check_lib ohos native_buffer/native_buffer.h OH_NativeBuffer_Alloc -lnative_buffer
+ check_lib mediandk "stdint.h media/NdkImage.h" AImage_delete -lmediandk
+ check_lib camera2ndk "stdbool.h stdint.h camera/NdkCameraManager.h" ACameraManager_create -lcamera2ndk
+ 
+diff --git a/meson.build b/meson.build
+index 904a254..c2e638d 100644
+--- a/meson.build
++++ b/meson.build
+@@ -960,6 +960,7 @@ check_components = [
+   ['avisynth', ['avisynth/avisynth_c.h', 'avisynth/avs/version.h'], [], []],
+   ['alsa', ['alsa/asoundlib.h'], ['snd_pcm_htimestamp'], ['asound']],
+   ['android', ['android/native_window.h'], ['ANativeWindow_acquire'], ['android']],
++  ['ohos', ['native_buffer/native_buffer.h'], ['OH_NativeBuffer_Alloc'], ['native_buffer']],
+   ['bcrypt', ['windows.h', 'bcrypt.h'], ['BCryptGenRandom'], ['bcrypt'],{'defines': ['BCRYPT_RNG_ALGORITHM']}],
+   ['bzlib', ['bzlib.h'], ['BZ2_bzlibVersion'], ['bz2']],
+   ['camera2ndk', ['stdbool.h', 'stdint.h', 'camera/NdkCameraManager.h'], ['ACameraManager_create'], ['camera2ndk']],
+@@ -1805,7 +1806,7 @@ if host_machine.system() == 'windows'
+   project_c_args += cc.get_supported_arguments('-DWIN32_LEAN_AND_MEAN', '-wd4005', '-Wp,-w')
+ endif
+ 
+-if ['linux', 'openbsd', 'android'].contains(host_machine.system())
++if ['linux', 'openbsd', 'android', 'ohos'].contains(host_machine.system())
+   conf.set('section_data_rel_ro', 1)
+ endif
+ 
+@@ -2750,7 +2751,7 @@ if conf.get('x86') == 1
+   message('Inline assembly direct symbol references available: @0@'.format(conf.get('inline_asm_direct_symbol_refs')))
+ endif
+ 
+-arm_skip_checks = conf.get('arm', 0) == 1 and (host_machine.system() == 'linux' or host_machine.system() == 'android')
++arm_skip_checks = conf.get('arm', 0) == 1 and (host_machine.system() == 'linux' or host_machine.system() == 'android' or host_machine.system() == 'ohos')
+ 
+ # If the ASM checks couldn't be run, we need to update the state
+ # of ALL Arm instruction sets
+diff --git a/meson_options.txt b/meson_options.txt
+index 682c774..9363350 100644
+--- a/meson_options.txt
++++ b/meson_options.txt
+@@ -138,6 +138,7 @@ option('mmal', type: 'feature', value: 'disabled')
+ option('nvdec', type: 'feature', value: 'disabled')
+ option('nvenc', type: 'feature', value: 'disabled')
+ option('nanosleep', type: 'feature', value: 'auto')
++option('ohos', type: 'feature', value: 'auto')
+ option('ole32', type: 'feature', value: 'auto')
+ option('omx', type: 'feature', value: 'disabled')
+ option('omx_rpi', type: 'feature', value: 'disabled')
+-- 
+2.48.1
+

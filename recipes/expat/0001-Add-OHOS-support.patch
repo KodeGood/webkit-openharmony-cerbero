@@ -1,0 +1,25 @@
+From 5283bd5fc1fcd3e874880546de7fc04b5637fc61 Mon Sep 17 00:00:00 2001
+From: Jani Hautakangas <jani@kodegood.com>
+Date: Sun, 5 Oct 2025 22:53:55 +0300
+Subject: [PATCH] Add OHOS support
+
+---
+ CMakeLists.txt | 2 --
+ 1 file changed, 2 deletions(-)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index ff08155..50ec4e1 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -471,8 +471,6 @@ set(LIBAGE 9)       # configure.ac!
+ math(EXPR LIBCURRENT_MINUS_AGE "${LIBCURRENT} - ${LIBAGE}")
+ 
+ if(NOT WIN32)
+-    set_property(TARGET expat PROPERTY VERSION ${LIBCURRENT_MINUS_AGE}.${LIBAGE}.${LIBREVISION})
+-    set_property(TARGET expat PROPERTY SOVERSION ${LIBCURRENT_MINUS_AGE})
+     set_property(TARGET expat PROPERTY NO_SONAME ${NO_SONAME})
+ 
+     if(APPLE)
+-- 
+2.48.1
+

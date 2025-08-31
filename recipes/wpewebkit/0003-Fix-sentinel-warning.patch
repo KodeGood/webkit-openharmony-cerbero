@@ -1,0 +1,35 @@
+From b309b2a195e54c4c786dbf916c1a4653398ef3d8 Mon Sep 17 00:00:00 2001
+From: Jani Hautakangas <jani@kodegood.com>
+Date: Tue, 2 Sep 2025 22:39:08 +0300
+Subject: [PATCH 03/10] Fix sentinel warning
+
+Fix a `-Wsentinel` warning by using `nullptr` (not `NULL`) to terminate
+the varargs in `gst_caps_new_simple()`, which is annotated as
+G_GNUC_NULL_TERMINATED.
+
+Reviewed by NOBODY (OOPS!).
+
+Explanation of why this fixes the bug (OOPS!).
+
+* Source/WebCore/platform/graphics/gstreamer/mse/AppendPipeline.cpp:
+(WebCore::AppendPipeline::AppendPipeline):
+---
+ .../WebCore/platform/graphics/gstreamer/mse/AppendPipeline.cpp  | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/Source/WebCore/platform/graphics/gstreamer/mse/AppendPipeline.cpp b/Source/WebCore/platform/graphics/gstreamer/mse/AppendPipeline.cpp
+index ecd2750680a8..858e5e391b84 100644
+--- a/Source/WebCore/platform/graphics/gstreamer/mse/AppendPipeline.cpp
++++ b/Source/WebCore/platform/graphics/gstreamer/mse/AppendPipeline.cpp
+@@ -208,7 +208,7 @@ AppendPipeline::AppendPipeline(SourceBufferPrivateGStreamer& sourceBufferPrivate
+     if (type.endsWith("mp4"_s) || type.endsWith("aac"_s)) {
+         m_demux = makeGStreamerElement("qtdemux"_s);
+         m_typefind = makeGStreamerElement("identity"_s);
+-        GRefPtr<GstCaps> caps = adoptGRef(gst_caps_new_simple("video/quicktime", "variant", G_TYPE_STRING, "mse-bytestream", NULL));
++        GRefPtr<GstCaps> caps = adoptGRef(gst_caps_new_simple("video/quicktime", "variant", G_TYPE_STRING, "mse-bytestream", nullptr));
+         gst_app_src_set_caps(GST_APP_SRC(m_appsrc.get()), caps.get());
+     } else if (type.endsWith("webm"_s)) {
+         m_demux = makeGStreamerElement("matroskademux"_s);
+-- 
+2.48.1
+

@@ -48,6 +48,9 @@ class Recipe(recipe.Recipe):
             else:
                 self.deps.append('libiconv')
 
+        if self.config.target_platform == Platform.OHOS:
+            self.meson_options.update({'iconv': 'libc'})
+
         if self.config.target_platform == Platform.WINDOWS:
             # Want secure versions of stdlib functions. Glib already defines
             # _WIN32_WINNT, so undefine it on the cmdline to avoid warnings
